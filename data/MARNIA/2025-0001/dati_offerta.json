@@ -1,0 +1,11 @@
+{
+    "date": "2025-04-19",
+    "customer": "Marnia",
+    "customer_email": "marniamerda@schifo.it",
+    "address": "Via nel fosso,2",
+    "offer_description": "Vendita Soluzione 2: Usa un context processor (soluzione migliore) Questa è la soluzione più elegante perché imposta la variabile per tutti i template automaticamente.\r\nAggiungi questo codice al tuo file app.py, dopo la creazione dell'app Flask ma prima delle definizioni delle route:",
+    "offer_number": "2025-0001",
+    "tabs": [],
+    "id": "c9610529-39d0-4a3b-934a-891443b9f4c8",
+    "pdf_path": "offerta_2025-0001.pdf"
+}

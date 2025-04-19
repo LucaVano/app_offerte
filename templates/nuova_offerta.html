@@ -1,0 +1,259 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ 'Modifica Offerta' if is_edit else 'Nuova Offerta' }} - Generatore Offerte Valtservice{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-card {
+        transition: all 0.3s ease;
+    }
+    .product-card:hover {
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    }
+    .remove-tab-btn:hover, .remove-product-btn:hover {
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3">{{ 'Modifica Offerta' if is_edit else 'Nuova Offerta' }}</h1>
+    <button type="button" class="btn btn-outline-secondary" onclick="window.history.back();">
+        <i class="fas fa-arrow-left me-1"></i> Indietro
+    </button>
+</div>
+
+<form action="{{ url_for('edit_offerta', offerta_id=offerta.id) if is_edit else url_for('nuova_offerta') }}" method="post" enctype="multipart/form-data" id="offerForm">
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">Informazioni Offerta</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label for="date" class="form-label">Data</label>
+                    <input type="date" class="form-control" id="date" name="date" required
+                           value="{{ offerta.date if is_edit else today_date }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="offer_number" class="form-label">Numero Offerta</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="offer_number" name="offer_number" 
+                               value="{{ offerta.offer_number if is_edit else next_number }}">
+                        <div class="input-group-text">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="update_counter" name="update_counter">
+                                <label class="form-check-label" for="update_counter">Aggiorna contatore</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <label for="customer" class="form-label">Cliente</label>
+                    <input type="text" class="form-control" id="customer" name="customer" required
+                           value="{{ offerta.customer if is_edit else '' }}">
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="customer_email" class="form-label">Email Cliente</label>
+                    <input type="email" class="form-control" id="customer_email" name="customer_email"
+                           value="{{ offerta.customer_email if is_edit else '' }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="address" class="form-label">Indirizzo</label>
+                    <input type="text" class="form-control" id="address" name="address"
+                           value="{{ offerta.address if is_edit else '' }}">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="offer_description" class="form-label">Descrizione Offerta</label>
+                <textarea class="form-control" id="offer_description" name="offer_description" rows="3">{{ offerta.offer_description if is_edit else '' }}</textarea>
+            </div>
+        </div>
+    </div>
+    
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="h4">Schede Prodotto</h3>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-primary" id="addSingleProductBtn">
+                <i class="fas fa-plus"></i> Aggiungi Prodotto Singolo
+            </button>
+            <button type="button" class="btn btn-outline-primary" id="addMultiProductBtn">
+                <i class="fas fa-plus"></i> Aggiungi Multiprodotto
+            </button>
+        </div>
+    </div>
+    
+    <div id="tabsContainer">
+        {% if is_edit and offerta.tabs %}
+            {% for tab in offerta.tabs %}
+                {% if tab.type == 'single_product' %}
+                    {% include 'components/form_prodotto_singolo.html' with context %}
+                {% elif tab.type == 'multi_product' %}
+                    {% include 'components/form_multiprodotto.html' with context %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </div>
+    
+    <input type="hidden" name="tab_count" id="tabCount" value="{{ offerta.tabs|length if is_edit and offerta.tabs else 0 }}">
+    
+    <div class="text-center my-4">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-save me-2"></i> {{ 'Aggiorna Offerta' if is_edit else 'Genera Offerta' }}
+        </button>
+    </div>
+</form>
+
+<!-- Template per nuove schede (nascosti) -->
+<div id="singleProductTemplate" class="d-none">
+    {% include 'components/form_prodotto_singolo.html' with context %}
+</div>
+
+<div id="multiProductTemplate" class="d-none">
+    {% include 'components/form_multiprodotto.html' with context %}
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabsContainer = document.getElementById('tabsContainer');
+        const tabCount = document.getElementById('tabCount');
+        let currentTabIndex = parseInt(tabCount.value);
+        
+        // Aggiungi una scheda prodotto singolo
+        document.getElementById('addSingleProductBtn').addEventListener('click', function() {
+            let template = document.getElementById('singleProductTemplate').innerHTML;
+            template = template.replace(/\{\{ tab_index \}\}/g, currentTabIndex);
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = template;
+            tabsContainer.appendChild(tempDiv.firstElementChild);
+            
+            currentTabIndex++;
+            tabCount.value = currentTabIndex;
+            
+            // Aggiungi event listener al nuovo pulsante di rimozione
+            addRemoveTabEventListener();
+        });
+        
+        // Aggiungi una scheda multiprodotto
+        document.getElementById('addMultiProductBtn').addEventListener('click', function() {
+            let template = document.getElementById('multiProductTemplate').innerHTML;
+            template = template.replace(/\{\{ tab_index \}\}/g, currentTabIndex);
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = template;
+            tabsContainer.appendChild(tempDiv.firstElementChild);
+            
+            currentTabIndex++;
+            tabCount.value = currentTabIndex;
+            
+            // Aggiungi event listener al nuovo pulsante di rimozione
+            addRemoveTabEventListener();
+        });
+        
+        // Funzione per aggiungere event listener ai pulsanti di rimozione
+        function addRemoveTabEventListener() {
+            document.querySelectorAll('.remove-tab-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const card = this.closest('.product-card');
+                    card.remove();
+                    
+                    // Aggiorna gli indici delle schede
+                    updateTabIndices();
+                });
+            });
+        }
+        
+        // Aggiorna gli indici delle schede dopo la rimozione
+        function updateTabIndices() {
+            const cards = document.querySelectorAll('.product-card');
+            cards.forEach((card, index) => {
+                const oldIndex = card.getAttribute('data-tab-index');
+                const tabType = card.getAttribute('data-tab-type');
+                
+                // Aggiorna l'attributo data-tab-index
+                card.setAttribute('data-tab-index', index);
+                
+                // Aggiorna tutti gli input con il nuovo indice
+                card.querySelectorAll('input, select, textarea').forEach(input => {
+                    const name = input.getAttribute('name');
+                    if (name && name.includes('_' + oldIndex)) {
+                        input.setAttribute('name', name.replace('_' + oldIndex, '_' + index));
+                    }
+                    
+                    const id = input.getAttribute('id');
+                    if (id && id.includes('_' + oldIndex)) {
+                        const newId = id.replace('_' + oldIndex, '_' + index);
+                        input.setAttribute('id', newId);
+                        
+                        // Aggiorna anche le label associate
+                        const label = card.querySelector(`label[for="${id}"]`);
+                        if (label) {
+                            label.setAttribute('for', newId);
+                        }
+                    }
+                });
+                
+                // Aggiorna il tipo di tab
+                const tabTypeInput = card.querySelector(`input[name="tab_type_${oldIndex}"]`);
+                if (tabTypeInput) {
+                    tabTypeInput.setAttribute('name', `tab_type_${index}`);
+                }
+                
+                // Gestione speciale per multiprodotto
+                if (tabType === 'multi_product') {
+                    const table = card.querySelector(`table[id="products_table_${oldIndex}"]`);
+                    if (table) {
+                        table.id = `products_table_${index}`;
+                    }
+                    
+                    const productCount = card.querySelector(`input[id="product_count_${oldIndex}"]`);
+                    if (productCount) {
+                        productCount.id = `product_count_${index}`;
+                        productCount.name = `product_count_${index}`;
+                    }
+                    
+                    const addProductBtn = card.querySelector('.add-product-btn');
+                    if (addProductBtn) {
+                        addProductBtn.setAttribute('data-tab-index', index);
+                    }
+                    
+                    // Aggiorna gli indici dei prodotti nella tabella
+                    const productRows = card.querySelectorAll('.product-row');
+                    productRows.forEach((row, rowIndex) => {
+                        row.querySelectorAll('input').forEach(input => {
+                            const nameParts = input.name.split('_');
+                            if (nameParts.length >= 3 && nameParts[1] == oldIndex) {
+                                nameParts[1] = index;
+                                input.name = nameParts.join('_');
+                            }
+                        });
+                    });
+                }
+            });
+            
+            // Aggiorna il contatore totale
+            tabCount.value = cards.length;
+        }
+        
+        // Aggiungi event listener ai pulsanti di rimozione esistenti
+        addRemoveTabEventListener();
+        
+        // Convalida del form prima dell'invio
+        document.getElementById('offerForm').addEventListener('submit', function(event) {
+            const cards = document.querySelectorAll('.product-card');
+            if (cards.length === 0) {
+                event.preventDefault();
+                alert('Devi aggiungere almeno una scheda prodotto!');
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,192 @@
+<div class="card mb-4 shadow-sm product-card" data-tab-index="{{ tab_index }}" data-tab-type="multi_product">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Scheda Multiprodotto</h5>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-tab-btn">
+            <i class="fas fa-times"></i> Rimuovi
+        </button>
+    </div>
+    <div class="card-body">
+        <input type="hidden" name="tab_type_{{ tab_index }}" value="multi_product">
+        
+        <div class="mb-3">
+            <label class="form-label">Prodotti per pagina</label>
+            <div class="btn-group" role="group">
+                <input type="radio" class="btn-check" name="max_items_per_page_{{ tab_index }}" id="max_items_1_{{ tab_index }}" value="1" 
+                    {{ 'checked' if tab and tab.max_items_per_page == 1 else '' }}>
+                <label class="btn btn-outline-primary" for="max_items_1_{{ tab_index }}">1</label>
+                
+                <input type="radio" class="btn-check" name="max_items_per_page_{{ tab_index }}" id="max_items_2_{{ tab_index }}" value="2" 
+                    {{ 'checked' if tab and tab.max_items_per_page == 2 else '' }}>
+                <label class="btn btn-outline-primary" for="max_items_2_{{ tab_index }}">2</label>
+                
+                <input type="radio" class="btn-check" name="max_items_per_page_{{ tab_index }}" id="max_items_3_{{ tab_index }}" value="3" 
+                    {{ 'checked' if not tab or tab.max_items_per_page == 3 else '' }}>
+                <label class="btn btn-outline-primary" for="max_items_3_{{ tab_index }}">3</label>
+            </div>
+        </div>
+        
+        <div class="table-responsive mb-3">
+            <table class="table table-bordered table-hover" id="products_table_{{ tab_index }}">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nome Prodotto</th>
+                        <th>Modello</th>
+                        <th>Prezzo Unitario (€)</th>
+                        <th>Quantità</th>
+                        <th>Descrizione</th>
+                        <th>Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if tab and tab.products %}
+                        {% for product in tab.products %}
+                            <tr class="product-row">
+                                <td>
+                                    <input type="text" class="form-control" name="product_name_{{ tab_index }}_{{ loop.index0 }}" 
+                                        value="{{ product[0] }}" required>
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control" name="product_model_{{ tab_index }}_{{ loop.index0 }}" 
+                                        value="{{ product[1] }}" required>
+                                </td>
+                                <td>
+                                    <input type="number" step="0.01" min="0" class="form-control" name="product_price_{{ tab_index }}_{{ loop.index0 }}" 
+                                        value="{{ product[2] }}" required>
+                                </td>
+                                <td>
+                                    <input type="number" step="1" min="1" class="form-control" name="product_quantity_{{ tab_index }}_{{ loop.index0 }}" 
+                                        value="{{ product[3] }}" required>
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control" name="product_description_{{ tab_index }}_{{ loop.index0 }}" 
+                                        value="{{ product[4] }}">
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr class="product-row">
+                            <td>
+                                <input type="text" class="form-control" name="product_name_{{ tab_index }}_0" required>
+                            </td>
+                            <td>
+                                <input type="text" class="form-control" name="product_model_{{ tab_index }}_0" required>
+                            </td>
+                            <td>
+                                <input type="number" step="0.01" min="0" class="form-control" name="product_price_{{ tab_index }}_0" value="0.00" required>
+                            </td>
+                            <td>
+                                <input type="number" step="1" min="1" class="form-control" name="product_quantity_{{ tab_index }}_0" value="1" required>
+                            </td>
+                            <td>
+                                <input type="text" class="form-control" name="product_description_{{ tab_index }}_0">
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        
+        <input type="hidden" name="product_count_{{ tab_index }}" id="product_count_{{ tab_index }}" 
+            value="{{ tab.products|length if tab and tab.products else 1 }}">
+        
+        <button type="button" class="btn btn-success add-product-btn" data-tab-index="{{ tab_index }}">
+            <i class="fas fa-plus"></i> Aggiungi Prodotto
+        </button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestisce l'aggiunta di un nuovo prodotto alla tabella
+        document.querySelectorAll('.add-product-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const tabIndex = this.getAttribute('data-tab-index');
+                const table = document.getElementById(`products_table_${tabIndex}`);
+                const productCount = document.getElementById(`product_count_${tabIndex}`);
+                const newIndex = parseInt(productCount.value);
+                
+                const newRow = document.createElement('tr');
+                newRow.className = 'product-row';
+                newRow.innerHTML = `
+                    <td>
+                        <input type="text" class="form-control" name="product_name_${tabIndex}_${newIndex}" required>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" name="product_model_${tabIndex}_${newIndex}" required>
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" min="0" class="form-control" name="product_price_${tabIndex}_${newIndex}" value="0.00" required>
+                    </td>
+                    <td>
+                        <input type="number" step="1" min="1" class="form-control" name="product_quantity_${tabIndex}_${newIndex}" value="1" required>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" name="product_description_${tabIndex}_${newIndex}">
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                
+                table.querySelector('tbody').appendChild(newRow);
+                productCount.value = newIndex + 1;
+                
+                // Aggiungi l'event listener al nuovo pulsante di rimozione
+                newRow.querySelector('.remove-product-btn').addEventListener('click', removeProductRow);
+            });
+        });
+        
+        // Gestisce la rimozione di un prodotto dalla tabella
+        function removeProductRow() {
+            const row = this.closest('tr');
+            const table = row.closest('table');
+            const tabIndex = table.id.replace('products_table_', '');
+            
+            // Non rimuovere l'ultima riga
+            if (table.querySelectorAll('tbody tr').length > 1) {
+                row.remove();
+                
+                // Aggiorna il contatore e rinumera gli indici
+                updateProductIndices(table, tabIndex);
+            } else {
+                // Se è l'ultima riga, pulisci solo i campi
+                row.querySelectorAll('input').forEach(input => {
+                    input.value = input.type === 'number' ? (input.name.includes('quantity') ? '1' : '0.00') : '';
+                });
+            }
+        }
+        
+        // Aggiorna gli indici dei prodotti dopo la rimozione
+        function updateProductIndices(table, tabIndex) {
+            const rows = table.querySelectorAll('tbody tr');
+            const productCount = document.getElementById(`product_count_${tabIndex}`);
+            
+            rows.forEach((row, index) => {
+                row.querySelectorAll('input').forEach(input => {
+                    const nameParts = input.name.split('_');
+                    nameParts[nameParts.length - 1] = index;
+                    input.name = nameParts.join('_');
+                });
+            });
+            
+            productCount.value = rows.length;
+        }
+        
+        // Aggiungi event listener a tutti i pulsanti di rimozione esistenti
+        document.querySelectorAll('.remove-product-btn').forEach(button => {
+            button.addEventListener('click', removeProductRow);
+        });
+    });
+</script>
