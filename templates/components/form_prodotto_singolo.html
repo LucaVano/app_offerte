@@ -61,12 +61,12 @@
             <div class="col-md-6">
                 <label for="discount_{{ tab_index }}" class="form-label">Sconto (%)</label>
                 <input type="number" step="0.01" min="0" max="100" class="form-control" id="discount_{{ tab_index }}" name="discount_{{ tab_index }}"
-                    value="{{ tab.discount|default('0') if tab else '0' }}" {{ 'disabled' if not tab or not tab.discount_flag }}>
+                    value="{{ tab.discount|default('0') if tab else '0' }}" {{ 'disabled' if not tab or not tab.discount_flag else '' }}>
             </div>
             <div class="col-md-6 d-flex align-items-end">
                 <div class="form-check mt-3">
                     <input class="form-check-input" type="checkbox" id="discount_flag_{{ tab_index }}" name="discount_flag_{{ tab_index }}"
-    {{ 'checked'        if tab and tab.discount_flag else '' }} onchange="toggleDiscount(this)">
+                        {{ 'checked' if tab and tab.discount_flag else '' }} onchange="toggleDiscount(this, '{{ tab_index }}')">
                     <label class="form-check-label" for="discount_flag_{{ tab_index }}">
                         Applicare sconto
                     </label>
@@ -94,7 +94,9 @@
 
 <script>
     function toggleDiscount(checkbox, index) {
-        const discountInput = document.getElementById(`discount_${index}`);
-        discountInput.disabled = !checkbox.checked;
+        const discountInput = document.getElementById('discount_' + index);
+        if (discountInput) {
+            discountInput.disabled = !checkbox.checked;
+        }
     }
 </script>

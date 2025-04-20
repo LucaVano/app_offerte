@@ -1,8 +1,22 @@
 /* CSS personalizzato per l'applicazione */
 
+html, body {
+    height: 100%;
+}
+
 body {
     background-color: #f8f9fa;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+.footer {
+    flex-shrink: 0;
 }
 
 /* Stile per la navbar */
@@ -86,7 +100,6 @@ body {
 /* Stili per il footer */
 footer {
     box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
-    margin-top: 3rem;
 }
 
 /* Responsive */
