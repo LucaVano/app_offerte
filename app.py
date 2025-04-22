@@ -93,8 +93,6 @@ def update_offerte_index(data, data_folder):
         with open(index_file, 'w', encoding='utf-8') as f:
             json.dump(index, f, indent=4, ensure_ascii=False)
         
-        print(f"DEBUG: Indice offerte aggiornato con successo")
-        
     except Exception as e:
         print(f"ERRORE nell'aggiornamento dell'indice: {e}")
 
@@ -130,7 +128,6 @@ def get_offerta_direct(offerta_id, data_folder):
                 if 'tabs' not in data or not isinstance(data['tabs'], list):
                     data['tabs'] = []
                     
-                print(f"DEBUG get_offerta_direct: Caricata offerta con {len(data['tabs'])} tab")
                 return data
                 
         print(f"ERRORE: Offerta con ID {offerta_id} non trovata nell'indice")
@@ -166,15 +163,6 @@ def nuova_offerta():
             return render_template('nuova_offerta.html', next_number=next_number, today_date=today_date)
         
         elif request.method == 'POST':
-            # Stampa tutte le chiavi del form per debug
-            form_keys = list(request.form.keys())
-            print(f"DEBUG: Form contiene {len(form_keys)} campi")
-            print(f"DEBUG: Alcuni campi del form: {form_keys[:10]}")
-            
-            # Raccogli tutti i campi tab_type
-            tab_types = {k: v for k, v in request.form.items() if k.startswith('tab_type_')}
-            print(f"DEBUG: Trovati {len(tab_types)} tab_type: {tab_types}")
-            
             # Crea un dizionario per la nuova offerta
             data = {
                 'date': request.form.get('date'),
@@ -187,10 +175,12 @@ def nuova_offerta():
                 'tabs': []
             }
             
+            # Raccogli tutti i campi tab_type
+            tab_types = {k: v for k, v in request.form.items() if k.startswith('tab_type_')}
+            
             # Elabora tutti i tab basandosi sui campi tab_type trovati
             for tab_key, tab_type in tab_types.items():
                 tab_index = tab_key.replace('tab_type_', '')
-                print(f"DEBUG: Elaborazione tab {tab_index}, tipo: {tab_type}")
                 
                 if tab_type == 'single_product':
                     # Gestione caricamento immagine
@@ -221,21 +211,19 @@ def nuova_offerta():
                     }
                     
                     data['tabs'].append(single_product_tab)
-                    print(f"DEBUG: Aggiunto prodotto singolo: {single_product_tab['product_name']}")
                 
                 elif tab_type == 'multi_product':
                     # Ottieni il numero di prodotti in questo tab
                     product_count = int(request.form.get(f'product_count_{tab_index}', 0))
-                    print(f"DEBUG: Tab multiprodotto {tab_index} ha {product_count} prodotti")
                     
                     products = []
                     for j in range(product_count):
                         product = [
-                            request.form.get(f'product_name_{tab_index}_{j}'),
-                            request.form.get(f'product_model_{tab_index}_{j}'),
-                            request.form.get(f'product_price_{tab_index}_{j}'),
-                            request.form.get(f'product_quantity_{tab_index}_{j}'),
-                            request.form.get(f'product_description_{tab_index}_{j}')
+                            request.form.get(f'product_name_{tab_index}_{j}', ''),
+                            request.form.get(f'product_model_{tab_index}_{j}', ''),
+                            request.form.get(f'product_price_{tab_index}_{j}', '0'),
+                            request.form.get(f'product_quantity_{tab_index}_{j}', '1'),
+                            request.form.get(f'product_description_{tab_index}_{j}', '')
                         ]
                         products.append(product)
                     
@@ -246,9 +234,6 @@ def nuova_offerta():
                     }
                     
                     data['tabs'].append(multi_product_tab)
-                    print(f"DEBUG: Aggiunto tab multiprodotto con {len(products)} prodotti")
-            
-            print(f"DEBUG: Dati finali contengono {len(data['tabs'])} tab")
             
             # Salva direttamente i dati in un file JSON
             customer_folder = os.path.join(app.config['DATA_FOLDER'], data['customer'].upper())
@@ -259,8 +244,6 @@ def nuova_offerta():
             
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
-            
-            print(f"DEBUG: JSON salvato con successo in {json_path}")
             
             # Aggiorna indice offerte
             update_offerte_index(data, app.config['DATA_FOLDER'])
@@ -306,9 +289,6 @@ def view_offerta(offerta_id):
             flash('Offerta non trovata', 'danger')
             return redirect(url_for('index'))
         
-        # Debug info
-        print(f"DEBUG view_offerta: ID={offerta_id}, tabs={len(offerta_data.get('tabs', []))}")
-        
         return render_template('vista_offerta.html', offerta=offerta_data)
     except Exception as e:
         import traceback
@@ -339,7 +319,6 @@ def edit_offerta(offerta_id):
             
             # Raccogli tutti i campi tab_type
             tab_types = {k: v for k, v in request.form.items() if k.startswith('tab_type_')}
-            print(f"DEBUG edit: Trovati {len(tab_types)} tab_type: {tab_types}")
             
             # Aggiorna i dati dell'offerta
             data = {
@@ -394,11 +373,11 @@ def edit_offerta(offerta_id):
                     products = []
                     for j in range(product_count):
                         product = [
-                            request.form.get(f'product_name_{tab_index}_{j}'),
-                            request.form.get(f'product_model_{tab_index}_{j}'),
-                            request.form.get(f'product_price_{tab_index}_{j}'),
-                            request.form.get(f'product_quantity_{tab_index}_{j}'),
-                            request.form.get(f'product_description_{tab_index}_{j}')
+                            request.form.get(f'product_name_{tab_index}_{j}', ''),
+                            request.form.get(f'product_model_{tab_index}_{j}', ''),
+                            request.form.get(f'product_price_{tab_index}_{j}', '0'),
+                            request.form.get(f'product_quantity_{tab_index}_{j}', '1'),
+                            request.form.get(f'product_description_{tab_index}_{j}', '')
                         ]
                         products.append(product)
                     

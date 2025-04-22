@@ -8,22 +8,8 @@
     <div class="card-body">
         <input type="hidden" name="tab_type_{{ tab_index }}" value="multi_product">
         
-        <div class="mb-3">
-            <label class="form-label">Prodotti per pagina</label>
-            <div class="btn-group" role="group">
-                <input type="radio" class="btn-check" name="max_items_per_page_{{ tab_index }}" id="max_items_1_{{ tab_index }}" value="1" 
-                    {{ 'checked' if tab and tab.max_items_per_page == 1 else '' }}>
-                <label class="btn btn-outline-primary" for="max_items_1_{{ tab_index }}">1</label>
-                
-                <input type="radio" class="btn-check" name="max_items_per_page_{{ tab_index }}" id="max_items_2_{{ tab_index }}" value="2" 
-                    {{ 'checked' if tab and tab.max_items_per_page == 2 else '' }}>
-                <label class="btn btn-outline-primary" for="max_items_2_{{ tab_index }}">2</label>
-                
-                <input type="radio" class="btn-check" name="max_items_per_page_{{ tab_index }}" id="max_items_3_{{ tab_index }}" value="3" 
-                    {{ 'checked' if not tab or tab.max_items_per_page == 3 else '' }}>
-                <label class="btn btn-outline-primary" for="max_items_3_{{ tab_index }}">3</label>
-            </div>
-        </div>
+        <!-- Input nascosto per il numero massimo di prodotti per pagina -->
+        <input type="hidden" name="max_items_per_page_{{ tab_index }}" value="3">
         
         <div class="table-responsive mb-3">
             <table class="table table-bordered table-hover" id="products_table_{{ tab_index }}">
@@ -59,10 +45,10 @@
                                 </td>
                                 <td>
                                     <input type="text" class="form-control" name="product_description_{{ tab_index }}_{{ loop.index0 }}" 
-                                        value="{{ product[4] }}">
+                                        value="{{ product[4] if product|length > 4 else '' }}">
                                 </td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn" onclick="removeProduct(this)">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
@@ -86,7 +72,7 @@
                                 <input type="text" class="form-control" name="product_description_{{ tab_index }}_0">
                             </td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn" onclick="removeProduct(this)">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
@@ -99,176 +85,110 @@
         <input type="hidden" name="product_count_{{ tab_index }}" id="product_count_{{ tab_index }}" 
             value="{{ tab.products|length if tab and tab.products else 1 }}">
         
-        <button type="button" class="btn btn-success add-product-btn" data-tab-index="{{ tab_index }}">
+        <button type="button" class="btn btn-success" onclick="addProduct('{{ tab_index }}')">
             <i class="fas fa-plus"></i> Aggiungi Prodotto
         </button>
     </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Gestisce l'aggiunta di un nuovo prodotto alla tabella
-        document.querySelectorAll('.add-product-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const tabIndex = this.getAttribute('data-tab-index');
-                const table = document.getElementById(`products_table_${tabIndex}`);
-                const productCount = document.getElementById(`product_count_${tabIndex}`);
-                const newIndex = parseInt(productCount.value);
-                
-                // Ottieni il valore massimo di prodotti selezionato
-                const maxItemsSelected = getSelectedMaxItems(tabIndex);
-                
-                // Verifica se abbiamo già raggiunto il limite
-                const currentRows = table.querySelectorAll('tbody tr').length;
-                if (currentRows >= maxItemsSelected) {
-                    alert(`Non puoi aggiungere più di ${maxItemsSelected} prodotti con l'impostazione attuale.`);
-                    return;
-                }
-                
-                const newRow = document.createElement('tr');
-                newRow.className = 'product-row';
-                newRow.innerHTML = `
-                    <td>
-                        <input type="text" class="form-control" name="product_name_${tabIndex}_${newIndex}" required>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control" name="product_model_${tabIndex}_${newIndex}" required>
-                    </td>
-                    <td>
-                        <input type="number" step="0.01" min="0" class="form-control" name="product_price_${tabIndex}_${newIndex}" value="0.00" required>
-                    </td>
-                    <td>
-                        <input type="number" step="1" min="1" class="form-control" name="product_quantity_${tabIndex}_${newIndex}" value="1" required>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control" name="product_description_${tabIndex}_${newIndex}">
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                
-                table.querySelector('tbody').appendChild(newRow);
-                productCount.value = newIndex + 1;
-                
-                // Aggiungi l'event listener al nuovo pulsante di rimozione
-                newRow.querySelector('.remove-product-btn').addEventListener('click', removeProductRow);
-                
-                // Aggiorna lo stato del pulsante "Aggiungi Prodotto"
-                updateAddButtonState(tabIndex);
+    // Funzione per aggiungere un prodotto
+    function addProduct(tabIndex) {
+        console.log('Aggiunta prodotto per tabIndex:', tabIndex);
+        const table = document.getElementById('products_table_' + tabIndex);
+        const productCount = document.getElementById('product_count_' + tabIndex);
+        
+        if (!table || !productCount) {
+            console.error('Tabella o contatore non trovati');
+            return;
+        }
+        
+        // Conta le righe esistenti nella tabella
+        const rows = table.querySelectorAll('tbody tr');
+        if (rows.length >= 3) {
+            alert('Non puoi aggiungere più di 3 prodotti per pagina.');
+            return;
+        }
+        
+        // Ottieni l'indice del nuovo prodotto
+        const newIndex = parseInt(productCount.value);
+        
+        // Crea una nuova riga
+        const newRow = document.createElement('tr');
+        newRow.className = 'product-row';
+        newRow.innerHTML = `
+            <td>
+                <input type="text" class="form-control" name="product_name_${tabIndex}_${newIndex}" required>
+            </td>
+            <td>
+                <input type="text" class="form-control" name="product_model_${tabIndex}_${newIndex}" required>
+            </td>
+            <td>
+                <input type="number" step="0.01" min="0" class="form-control" name="product_price_${tabIndex}_${newIndex}" value="0.00" required>
+            </td>
+            <td>
+                <input type="number" step="1" min="1" class="form-control" name="product_quantity_${tabIndex}_${newIndex}" value="1" required>
+            </td>
+            <td>
+                <input type="text" class="form-control" name="product_description_${tabIndex}_${newIndex}">
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn" onclick="removeProduct(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        
+        // Aggiungi la riga alla tabella
+        table.querySelector('tbody').appendChild(newRow);
+        
+        // Aggiorna il contatore dei prodotti
+        productCount.value = newIndex + 1;
+        console.log('Prodotto aggiunto con successo, nuovo conteggio:', productCount.value);
+    }
+    
+    // Funzione per rimuovere un prodotto
+    function removeProduct(button) {
+        console.log('Rimozione prodotto');
+        const row = button.closest('tr');
+        const table = row.closest('table');
+        const tabIndex = table.id.replace('products_table_', '');
+        
+        // Non rimuovere l'ultima riga
+        const rows = table.querySelectorAll('tbody tr');
+        if (rows.length > 1) {
+            row.remove();
+            
+            // Aggiorna gli indici dei prodotti
+            updateProductIndices(table, tabIndex);
+        } else {
+            // Se è l'ultima riga, pulisci solo i campi
+            row.querySelectorAll('input').forEach(input => {
+                input.value = input.type === 'number' ? (input.name.includes('quantity') ? '1' : '0.00') : '';
+            });
+        }
+    }
+    
+    // Funzione per aggiornare gli indici dei prodotti
+    function updateProductIndices(table, tabIndex) {
+        console.log('Aggiornamento indici prodotti per tabIndex:', tabIndex);
+        const rows = table.querySelectorAll('tbody tr');
+        const productCount = document.getElementById('product_count_' + tabIndex);
+        
+        if (!productCount) {
+            console.error('Contatore prodotti non trovato');
+            return;
+        }
+        
+        rows.forEach((row, index) => {
+            row.querySelectorAll('input').forEach(input => {
+                const nameParts = input.name.split('_');
+                nameParts[nameParts.length - 1] = index;
+                input.name = nameParts.join('_');
             });
         });
         
-        // Gestisce la rimozione di un prodotto dalla tabella
-        function removeProductRow() {
-            const row = this.closest('tr');
-            const table = row.closest('table');
-            const tabIndex = table.id.replace('products_table_', '');
-            
-            // Non rimuovere l'ultima riga
-            if (table.querySelectorAll('tbody tr').length > 1) {
-                row.remove();
-                
-                // Aggiorna il contatore e rinumera gli indici
-                updateProductIndices(table, tabIndex);
-                
-                // Aggiorna lo stato del pulsante "Aggiungi Prodotto"
-                updateAddButtonState(tabIndex);
-            } else {
-                // Se è l'ultima riga, pulisci solo i campi
-                row.querySelectorAll('input').forEach(input => {
-                    input.value = input.type === 'number' ? (input.name.includes('quantity') ? '1' : '0.00') : '';
-                });
-            }
-        }
-        
-        // Aggiorna gli indici dei prodotti dopo la rimozione
-        function updateProductIndices(table, tabIndex) {
-            const rows = table.querySelectorAll('tbody tr');
-            const productCount = document.getElementById(`product_count_${tabIndex}`);
-            
-            rows.forEach((row, index) => {
-                row.querySelectorAll('input').forEach(input => {
-                    const nameParts = input.name.split('_');
-                    nameParts[nameParts.length - 1] = index;
-                    input.name = nameParts.join('_');
-                });
-            });
-            
-            productCount.value = rows.length;
-        }
-        
-        // Ottieni il valore massimo di prodotti selezionato
-        function getSelectedMaxItems(tabIndex) {
-            const radioButtons = document.querySelectorAll(`input[name="max_items_per_page_${tabIndex}"]`);
-            for (let radio of radioButtons) {
-                if (radio.checked) {
-                    return parseInt(radio.value);
-                }
-            }
-            return 3; // Valore predefinito
-        }
-        
-        // Aggiorna lo stato del pulsante "Aggiungi Prodotto" in base al numero massimo di prodotti
-        function updateAddButtonState(tabIndex) {
-            const table = document.getElementById(`products_table_${tabIndex}`);
-            const addButton = document.querySelector(`.add-product-btn[data-tab-index="${tabIndex}"]`);
-            const currentRows = table.querySelectorAll('tbody tr').length;
-            const maxItems = getSelectedMaxItems(tabIndex);
-            
-            if (currentRows >= maxItems) {
-                addButton.disabled = true;
-                addButton.title = `Non puoi aggiungere più di ${maxItems} prodotti con l'impostazione attuale.`;
-            } else {
-                addButton.disabled = false;
-                addButton.title = "Aggiungi un nuovo prodotto";
-            }
-        }
-        
-        // Aggiungi event listener ai pulsanti di rimozione esistenti
-        document.querySelectorAll('.remove-product-btn').forEach(button => {
-            button.addEventListener('click', removeProductRow);
-        });
-        
-        // Aggiungi event listener ai radio button per il numero massimo di prodotti
-        document.querySelectorAll('input[type="radio"][name^="max_items_per_page_"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                const tabIndex = this.name.replace('max_items_per_page_', '');
-                const table = document.getElementById(`products_table_${tabIndex}`);
-                const rows = table.querySelectorAll('tbody tr');
-                const maxItems = parseInt(this.value);
-                
-                // Se ci sono più righe del massimo consentito, rimuovi le righe in eccesso
-                if (rows.length > maxItems) {
-                    const confirmRemove = confirm(`Questa impostazione permette un massimo di ${maxItems} prodotti. Verranno rimossi ${rows.length - maxItems} prodotti. Continuare?`);
-                    
-                    if (confirmRemove) {
-                        for (let i = rows.length - 1; i >= maxItems; i--) {
-                            rows[i].remove();
-                        }
-                        
-                        // Aggiorna il contatore dei prodotti
-                        const productCount = document.getElementById(`product_count_${tabIndex}`);
-                        productCount.value = maxItems;
-                    } else {
-                        // Se l'utente annulla, ripristina il radio button precedente
-                        const previousValue = rows.length > 3 ? 3 : rows.length;
-                        document.getElementById(`max_items_${previousValue}_${tabIndex}`).checked = true;
-                        return;
-                    }
-                }
-                
-                // Aggiorna lo stato del pulsante "Aggiungi Prodotto"
-                updateAddButtonState(tabIndex);
-            });
-        });
-        
-        // Inizializza lo stato dei pulsanti "Aggiungi Prodotto" per tutte le schede multiprodotto
-        document.querySelectorAll('.product-card[data-tab-type="multi_product"]').forEach(card => {
-            const tabIndex = card.getAttribute('data-tab-index');
-            updateAddButtonState(tabIndex);
-        });
-    });
+        productCount.value = rows.length;
+        console.log('Indici aggiornati, nuovo conteggio:', productCount.value);
+    }
 </script>

@@ -55,9 +55,13 @@
 </div>
 {% endif %}
 
-{% set total_price = 0 %}
-{% for tab in offerta.tabs|default([]) %}
+<!-- Inizializziamo il prezzo totale dell'offerta -->
+{% set grand_total = 0 %}
+
+<!-- Prima visualizziamo tutte le schede prodotto singolo -->
+{% for tab in offerta.tabs %}
     {% if tab.type == 'single_product' %}
+        <!-- Calcolo del prezzo totale per il prodotto singolo -->
         {% set prezzo_unitario = tab.unit_price|float %}
         {% set quantita = tab.quantity|float %}
         {% if tab.discount_flag %}
@@ -67,7 +71,7 @@
         {% else %}
             {% set prezzo_totale = prezzo_unitario * quantita %}
         {% endif %}
-        {% set total_price = total_price + prezzo_totale %}
+        {% set grand_total = grand_total + prezzo_totale %}
 
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
@@ -127,14 +131,21 @@
                 </div>
             </div>
         </div>
+    {% endif %}
+{% endfor %}
 
-    {% elif tab.type == 'multi_product' %}
+<!-- Poi visualizziamo tutte le schede multiprodotto -->
+{% for tab in offerta.tabs %}
+    {% if tab.type == 'multi_product' %}
+        <!-- Calcolo del prezzo totale per il multiprodotto -->
+        {% set multi_product_total = 0 %}
+        
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
                 <h5 class="card-title mb-0">Scheda Multiprodotto</h5>
             </div>
             <div class="card-body">
-                <p><strong>Prodotti per pagina:</strong> {{ tab.max_items_per_page }}</p>
+                <p><strong>Prodotti per pagina:</strong> {{ tab.max_items_per_page|default(3) }}</p>
                 
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover">
@@ -149,18 +160,18 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for product in tab.products|default([]) %}
+                            {% for product in tab.products %}
                                 {% if product|length >= 4 %}
                                     {% set product_price = product[2]|float %}
                                     {% set product_quantity = product[3]|float %}
                                     {% set product_total = product_price * product_quantity %}
-                                    {% set total_price = total_price + product_total %}
+                                    {% set multi_product_total = multi_product_total + product_total %}
                                     <tr>
                                         <td>{{ product[0] }}</td>
                                         <td>{{ product[1] }}</td>
-                                        <td>{{ "%.2f"|format(product_price) }} €</td>
-                                        <td>{{ product_quantity }}</td>
-                                        <td>{{ "%.2f"|format(product_total) }} €</td>
+                                        <td class="product-price">{{ "%.2f"|format(product_price) }} €</td>
+                                        <td class="product-quantity">{{ product_quantity }}</td>
+                                        <td class="product-total">{{ "%.2f"|format(product_total) }} €</td>
                                         <td>{{ product[4] if product|length > 4 else '' }}</td>
                                     </tr>
                                 {% endif %}
@@ -168,8 +179,8 @@
                         </tbody>
                         <tfoot>
                             <tr class="table-light">
-                                <th colspan="4" class="text-end">Totale:</th>
-                                <th>{{ "%.2f"|format(total_price) }} €</th>
+                                <th colspan="4" class="text-end">Totale multiprodotto:</th>
+                                <th>{{ "%.2f"|format(multi_product_total) }} €</th>
                                 <th></th>
                             </tr>
                         </tfoot>
@@ -177,6 +188,8 @@
                 </div>
             </div>
         </div>
+        <!-- Aggiungiamo il totale di questa scheda al totale complessivo -->
+        {% set grand_total = grand_total + multi_product_total %}
     {% endif %}
 {% endfor %}
 
@@ -194,7 +207,7 @@
             <div class="col-md-6">
                 <div class="alert alert-success alert-permanent">
                     <h5>Prezzo Totale Offerta</h5>
-                    <h3 class="mb-0">{{ "%.2f"|format(total_price) }} €</h3>
+                    <h3 class="mb-0" id="grand-total">{{ "%.2f"|format(grand_total) }} €</h3>
                     <small class="text-muted">IVA esclusa</small>
                 </div>
             </div>
