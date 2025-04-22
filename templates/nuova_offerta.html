@@ -125,7 +125,12 @@
     document.addEventListener('DOMContentLoaded', function() {
         const tabsContainer = document.getElementById('tabsContainer');
         const tabCount = document.getElementById('tabCount');
-        let currentTabIndex = parseInt(tabCount.value);
+        let currentTabIndex = parseInt(tabCount.value) || 0;
+        
+        console.log("Inizializzazione pagina - currentTabIndex:", currentTabIndex);
+        
+        // Immediatamente dopo il caricamento, assicuriamoci che tutti i tab abbiano indici corretti
+        updateTabIndices();
         
         // Aggiungi una scheda prodotto singolo
         document.getElementById('addSingleProductBtn').addEventListener('click', function() {
@@ -144,12 +149,16 @@
             // Incremento dell'indice
             currentTabIndex++;
             tabCount.value = currentTabIndex;
+            console.log("Aggiunta scheda singolo prodotto - nuovo tabCount:", tabCount.value);
             
             // Aggiungi event listener al nuovo pulsante di rimozione
             addRemoveTabEventListener();
             
             // Inizializza la funzione toggleDiscount per questa scheda
             initToggleDiscount(currentTabIndex - 1);
+            
+            // Aggiorna tutti gli indici per essere sicuri
+            updateTabIndices();
         });
         
         // Aggiungi una scheda multiprodotto
@@ -169,12 +178,16 @@
             // Incremento dell'indice
             currentTabIndex++;
             tabCount.value = currentTabIndex;
+            console.log("Aggiunta scheda multiprodotto - nuovo tabCount:", tabCount.value);
             
             // Aggiungi event listener al nuovo pulsante di rimozione
             addRemoveTabEventListener();
             
             // Inizializza event listeners per i prodotti in multiprodotto
             initMultiProductListeners(currentTabIndex - 1);
+            
+            // Aggiorna tutti gli indici per essere sicuri
+            updateTabIndices();
         });
         
         // Funzione per aggiungere event listener ai pulsanti di rimozione
@@ -203,6 +216,8 @@
                 const oldIndex = card.getAttribute('data-tab-index');
                 const tabType = card.getAttribute('data-tab-type');
                 
+                console.log(`Aggiornamento indice da ${oldIndex} a ${index} per scheda di tipo ${tabType}`);
+                
                 // Aggiorna l'attributo data-tab-index
                 card.setAttribute('data-tab-index', index);
                 
@@ -226,11 +241,22 @@
                     }
                 });
                 
-                // Aggiorna il tipo di tab
-                const tabTypeInput = card.querySelector(`input[name="tab_type_${oldIndex}"]`);
-                if (tabTypeInput) {
-                    tabTypeInput.setAttribute('name', `tab_type_${index}`);
+                // Aggiorna il tipo di tab - questo è fondamentale!
+                const tabTypeInputName = `tab_type_${index}`;
+                let tabTypeInput = card.querySelector(`input[name="${tabTypeInputName}"]`);
+                
+                // Se non esiste il campo, lo creiamo
+                if (!tabTypeInput) {
+                    tabTypeInput = document.createElement('input');
+                    tabTypeInput.type = 'hidden';
+                    card.appendChild(tabTypeInput);
                 }
+                
+                // Imposta il nome corretto e il valore
+                tabTypeInput.name = tabTypeInputName;
+                tabTypeInput.value = tabType;
+                
+                console.log(`Impostato campo tab_type_${index} = ${tabType}`);
                 
                 // Gestione speciale per multiprodotto
                 if (tabType === 'multi_product') {
@@ -267,6 +293,7 @@
             // Aggiorna il contatore totale
             currentTabIndex = cards.length;
             tabCount.value = currentTabIndex;
+            console.log("Indici aggiornati, nuovo tabCount:", tabCount.value);
         }
         
         // Inizializza la funzione toggleDiscount per tutte le schede esistenti
@@ -403,8 +430,47 @@
             if (cards.length === 0) {
                 event.preventDefault();
                 alert('Devi aggiungere almeno una scheda prodotto!');
+            } else {
+                // Controlla e aggiorna il valore tab_count
+                tabCount.value = cards.length;
+                console.log("Form submission - tabCount set to:", tabCount.value);
+                
+                // Assicurati che tutti gli indici siano corretti prima dell'invio
+                updateTabIndices();
+                
+                // Debug - mostra tutti i campi del form prima dell'invio
+                console.log("Form submission - campi del form:");
+                const formData = new FormData(this);
+                for (var pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
             }
         });
+        
+        // Assicurati che gli indici siano aggiornati all'inizio
+        updateTabIndices();
     });
 </script>
+
+<script>
+// Funzione globale per gestire il toggle dello sconto
+function toggleDiscount(checkbox) {
+    const index = checkbox.id.replace('discount_flag_', '');
+    const discountInput = document.getElementById('discount_' + index);
+    
+    if (discountInput) {
+        discountInput.disabled = !checkbox.checked;
+        console.log("Toggle sconto per indice " + index + ": " + checkbox.checked);
+    }
+}
+
+// Inizializza tutti i checkbox dello sconto
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.discount-checkbox').forEach(function(checkbox) {
+        // Imposta lo stato iniziale di tutti i campi sconto
+        toggleDiscount(checkbox);
+    });
+});
+</script>
+
 {% endblock %}

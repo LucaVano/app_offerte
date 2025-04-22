@@ -6,7 +6,7 @@
         </button>
     </div>
     <div class="card-body">
-        <input type="hidden" name="tab_type_{{ tab_index }}" value="single_product">
+        <input type="hidden" name="tab_{{ tab_index }}type_" value="single_product">
         
         <div class="row mb-3">
             <div class="col-md-2">
@@ -15,13 +15,13 @@
                     value="{{ tab.posizione|default('') if tab else '' }}">
             </div>
             <div class="col-md-5">
-                <label for="product_name_{{ tab_index }}" class="form-label">Nome Prodotto</label>
-                <input type="text" class="form-control" id="product_name_{{ tab_index }}" name="product_name_{{ tab_index }}" required
+                <label for="product_{{ tab_index }}name_" class="form-label">Nome Prodotto</label>
+                <input type="text" class="form-control" id="product_{{ tab_index }}name_" name="product_{{ tab_index }}name_" required
                     value="{{ tab.product_name|default('') if tab else '' }}">
             </div>
             <div class="col-md-5">
-                <label for="product_code_{{ tab_index }}" class="form-label">Modello</label>
-                <input type="text" class="form-control" id="product_code_{{ tab_index }}" name="product_code_{{ tab_index }}" required
+                <label for="product_{{ tab_index }}code_" class="form-label">Modello</label>
+                <input type="text" class="form-control" id="product_{{ tab_index }}code_" name="product_{{ tab_index }}code_" required
                     value="{{ tab.product_code|default('') if tab else '' }}">
             </div>
         </div>
@@ -33,8 +33,8 @@
                     value="{{ tab.volts|default('') if tab else '' }}">
             </div>
             <div class="col-md-4">
-                <label for="power_w_{{ tab_index }}" class="form-label">Potenza (W)</label>
-                <input type="text" class="form-control" id="power_w_{{ tab_index }}" name="power_w_{{ tab_index }}"
+                <label for="power_{{ tab_index }}w_" class="form-label">Potenza (W)</label>
+                <input type="text" class="form-control" id="power_{{ tab_index }}w_" name="power_{{ tab_index }}w_"
                     value="{{ tab.power_w|default('') if tab else '' }}">
             </div>
             <div class="col-md-4">
@@ -46,8 +46,8 @@
         
         <div class="row mb-3">
             <div class="col-md-6">
-                <label for="unit_price_{{ tab_index }}" class="form-label">Prezzo Unitario (€)</label>
-                <input type="number" step="0.01" min="0" class="form-control" id="unit_price_{{ tab_index }}" name="unit_price_{{ tab_index }}" required
+                <label for="unit_{{ tab_index }}price_" class="form-label">Prezzo Unitario (€)</label>
+                <input type="number" step="0.01" min="0" class="form-control" id="unit_{{ tab_index }}price_" name="unit_{{ tab_index }}price_" required
                     value="{{ tab.unit_price|default('0.00') if tab else '0.00' }}">
             </div>
             <div class="col-md-6">
@@ -61,18 +61,18 @@
             <div class="col-md-6">
                 <label for="discount_{{ tab_index }}" class="form-label">Sconto (%)</label>
                 <input type="number" step="0.01" min="0" max="100" class="form-control" id="discount_{{ tab_index }}" name="discount_{{ tab_index }}"
-                    value="{{ tab.discount|default('0') if tab else '0' }}" {{ 'disabled' if not tab or not tab.discount_flag else '' }}>
+                    value="{{ tab.discount|default('0') if tab else '0' }}">
             </div>
             <div class="col-md-6 d-flex align-items-end">
                 <div class="form-check mt-3">
-                    <input class="form-check-input" type="checkbox" id="discount_flag_{{ tab_index }}" name="discount_flag_{{ tab_index }}"
-                        {{ 'checked' if tab and tab.discount_flag else '' }} onchange="toggleDiscount(this, '{{ tab_index }}')">
+                    <input class="form-check-input discount-checkbox" type="checkbox" id="discount_flag_{{ tab_index }}" name="discount_{{ tab_index }}flag_"
+                        {{ 'checked' if tab and tab.discount_flag else '' }} onchange="toggleDiscount(this)">
                     <label class="form-check-label" for="discount_flag_{{ tab_index }}">
                         Applicare sconto
                     </label>
                 </div>
             </div>
-        </div>
+        </div>        
         
         <div class="mb-3">
             <label for="description_{{ tab_index }}" class="form-label">Descrizione Prodotto</label>
@@ -81,7 +81,7 @@
         
         <div class="mb-3">
             <label for="product_image_{{ tab_index }}" class="form-label">Immagine Prodotto</label>
-            <input type="file" class="form-control" id="product_image_{{ tab_index }}" name="product_image_{{ tab_index }}" accept="image/*">
+            <input type="file" class="form-control" id="product_image_{{ tab_index }}" name="product_{{ tab_index }}image_" accept="image/*">
             {% if tab and tab.product_image_path %}
                 <div class="mt-2">
                     <img src="{{ tab.product_image_path }}" alt="Immagine prodotto" class="img-thumbnail" style="max-height: 100px;">
@@ -93,10 +93,21 @@
 </div>
 
 <script>
-    function toggleDiscount(checkbox, index) {
-        const discountInput = document.getElementById('discount_' + index);
-        if (discountInput) {
-            discountInput.disabled = !checkbox.checked;
+    document.addEventListener('DOMContentLoaded', function() {
+        // Trova tutti i checkbox per lo sconto in questa scheda
+        var discountCheckbox = document.getElementById('discount_flag_{{ tab_index }}');
+        var discountInput = document.getElementById('discount_{{ tab_index }}');
+        
+        if (discountCheckbox && discountInput) {
+            // Imposta lo stato iniziale
+            discountInput.disabled = !discountCheckbox.checked;
+            
+            // Aggiungi event listener
+            discountCheckbox.addEventListener('change', function() {
+                // Attiva/disattiva il campo sconto in base allo stato del checkbox
+                discountInput.disabled = !this.checked;
+                console.log("Discount toggle per tab {{ tab_index }}:", this.checked);
+            });
         }
-    }
+    });
 </script>

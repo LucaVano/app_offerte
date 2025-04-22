@@ -3,6 +3,7 @@ import os
 import json
 import uuid
 import shutil
+import re
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from utils.pdf_generator import generate_pdf
@@ -148,6 +149,300 @@ def get_all_offerte():
         print(f"ERRORE nel caricamento dell'indice: {e}")
     return []
 
+def process_form_final(form, files):
+    """
+    Versione finale della funzione process_form che risolve definitivamente il problema
+    """
+    # DEBUG: Stampa tutti i campi del form
+    print("\n------------------------------")
+    print("DUMP COMPLETO DEL FORM RICEVUTO:")
+    form_data = dict(form)
+    for k, v in form_data.items():
+        print(f"  {k}: {v}")
+    print("------------------------------\n")
+
+    tabs = []
+    
+    # Utilizza un pattern regex per trovare gli indici nelle chiavi
+    tab_indices = set()
+    product_indices = dict()  # Memorizza gli indici dei prodotti per ogni tab
+    
+    # Cerca gli indici numerici nei nomi dei campi
+    for key in form:
+        # Cerca pattern come tab_0type_
+        match = re.search(r'tab_(\d+)type_', key)
+        if match:
+            idx = int(match.group(1))
+            tab_indices.add(idx)
+            print(f"DEBUG: Trovato tab_{idx}type_ : {form[key]}")
+            continue
+            
+        # Cerca pattern come tab_type_0
+        match = re.search(r'tab_type_(\d+)', key)
+        if match:
+            idx = int(match.group(1))
+            tab_indices.add(idx)
+            print(f"DEBUG: Trovato tab_type_{idx} : {form[key]}")
+            continue
+            
+        # Cerca pattern per gli indici dei prodotti nelle schede multiprodotto
+        # Come product_1name__0, product_1model__0
+        match = re.search(r'product_(\d+)(name|model|price|quantity|description)__(\d+)', key)
+        if match:
+            tab_idx = int(match.group(1))
+            prod_idx = int(match.group(3))
+            
+            if tab_idx not in product_indices:
+                product_indices[tab_idx] = set()
+            
+            product_indices[tab_idx].add(prod_idx)
+            print(f"DEBUG: Trovato prodotto {prod_idx} per tab {tab_idx}")
+    
+    # Debug degli indici trovati
+    print(f"DEBUG: Indici tab trovati: {sorted(tab_indices)}")
+    print(f"DEBUG: Indici prodotti trovati: {product_indices}")
+
+    # Crea le schede
+    for idx in sorted(tab_indices):
+        print(f"DEBUG: Elaborazione tab {idx}")
+        
+        # Determina il tipo di scheda (controlla entrambi i formati possibili)
+        tab_type = None
+        if f'tab_{idx}type_' in form:
+            tab_type = form[f'tab_{idx}type_']
+        elif f'tab_type_{idx}' in form:
+            tab_type = form[f'tab_type_{idx}']
+        
+        print(f"DEBUG: Tipo tab {idx}: {tab_type}")
+        
+        if not tab_type:
+            print(f"DEBUG: Tipo non trovato per tab {idx}, salto...")
+            continue
+        
+        # Elabora in base al tipo
+        if tab_type == 'single_product':
+            # GESTIONE PRODOTTO SINGOLO
+            
+            # Cerca i campi con entrambi i formati possibili
+            product_name = get_form_value(form, [f'product_{idx}name_', f'product_name_{idx}'])
+            product_code = get_form_value(form, [f'product_{idx}code_', f'product_code_{idx}'])
+            unit_price = get_form_value(form, [f'unit_{idx}price_', f'unit_price_{idx}'], '0')
+            quantity = get_form_value(form, [f'quantity_{idx}'], '1')
+            description = get_form_value(form, [f'description_{idx}'])
+            discount = get_form_value(form, [f'discount_{idx}'], '0')
+            power_w = get_form_value(form, [f'power_{idx}w_', f'power_w_{idx}'])
+            volts = get_form_value(form, [f'volts_{idx}'])
+            size = get_form_value(form, [f'size_{idx}'])
+            posizione = get_form_value(form, [f'posizione_{idx}'])
+            
+            # Checkbox dello sconto - necessita di un trattamento speciale
+            discount_flag_keys = [f'discount_{idx}flag_', f'discount_flag_{idx}']
+            discount_flag = any(key in form and form[key] == 'on' for key in discount_flag_keys)
+            
+            # Gestione caricamento immagine
+            image_path = get_form_value(form, [f'existing_image_{idx}'], '')
+            product_image = None
+            for img_key in [f'product_{idx}image_', f'product_image_{idx}']:
+                if img_key in files:
+                    product_image = files[img_key]
+                    break
+            
+            if product_image and product_image.filename and allowed_file(product_image.filename):
+                filename = secure_filename(f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{product_image.filename}")
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                product_image.save(file_path)
+                image_path = '/static/uploads/' + filename
+                print(f"DEBUG: Salvata immagine in {image_path}")
+            
+            # Crea la scheda prodotto singolo
+            if product_name and product_code:  # Solo se i campi essenziali sono presenti
+                single_product_tab = {
+                    'type': 'single_product',
+                    'product_code': product_code,
+                    'product_name': product_name,
+                    'quantity': quantity,
+                    'unit_price': unit_price,
+                    'description': description,
+                    'discount': discount,
+                    'discount_flag': discount_flag,
+                    'power_w': power_w,
+                    'volts': volts,
+                    'size': size,
+                    'posizione': posizione,
+                    'product_image_path': image_path
+                }
+                
+                print(f"DEBUG: Aggiunto prodotto singolo: {product_name}")
+                tabs.append(single_product_tab)
+            else:
+                print(f"DEBUG: Saltato prodotto singolo per tab {idx} - dati essenziali mancanti")
+        
+        elif tab_type == 'multi_product':
+            # GESTIONE MULTIPRODOTTO
+            print(f"DEBUG: Elaborazione multiprodotto {idx}")
+            
+            # Recupera i prodotti per questa scheda
+            products = []
+            
+            # Se abbiamo già trovato gli indici dei prodotti per questa scheda
+            if idx in product_indices:
+                print(f"DEBUG: Trovati {len(product_indices[idx])} prodotti per tab {idx}")
+                
+                for prod_idx in sorted(product_indices[idx]):
+                    # Costruisci i nomi dei campi per questo prodotto
+                    name_key = f'product_{idx}name__{prod_idx}'
+                    model_key = f'product_{idx}model__{prod_idx}'
+                    price_key = f'product_{idx}price__{prod_idx}'
+                    quantity_key = f'product_{idx}quantity__{prod_idx}'
+                    description_key = f'product_{idx}description__{prod_idx}'
+                    
+                    # Solo se abbiamo il nome del prodotto
+                    if name_key in form and form[name_key].strip():
+                        product = [
+                            form.get(name_key, ''),
+                            form.get(model_key, ''),
+                            form.get(price_key, '0'),
+                            form.get(quantity_key, '1'),
+                            form.get(description_key, '')
+                        ]
+                        print(f"DEBUG: Aggiunto prodotto {prod_idx} in multiprodotto {idx}: {product[0]}")
+                        products.append(product)
+            
+            # Se non abbiamo trovato prodotti con l'approccio diretto, proviamo un altro metodo
+            if not products:
+                print(f"DEBUG: Tentando approccio alternativo per i prodotti del tab {idx}")
+                
+                # Cerca tutti i possibili campi prodotto per questa scheda
+                product_name_keys = []
+                for key in form:
+                    if f'product_{idx}name__' in key and form[key].strip():
+                        product_name_keys.append(key)
+                
+                for name_key in product_name_keys:
+                    try:
+                        # Estrai l'indice del prodotto dal nome del campo
+                        prod_idx = int(name_key.split('__')[1])
+                        
+                        # Altri campi di questo prodotto
+                        model_key = f'product_{idx}model__{prod_idx}'
+                        price_key = f'product_{idx}price__{prod_idx}'
+                        quantity_key = f'product_{idx}quantity__{prod_idx}'
+                        description_key = f'product_{idx}description__{prod_idx}'
+                        
+                        product = [
+                            form.get(name_key, ''),
+                            form.get(model_key, ''),
+                            form.get(price_key, '0'),
+                            form.get(quantity_key, '1'),
+                            form.get(description_key, '')
+                        ]
+                        print(f"DEBUG: Aggiunto prodotto con approccio alternativo: {product[0]}")
+                        products.append(product)
+                    except (ValueError, IndexError):
+                        print(f"DEBUG: Errore parsing indice prodotto da {name_key}")
+            
+            # Se abbiamo trovato dei prodotti, crea la scheda multiprodotto
+            if products:
+                max_items_per_page = 3  # Default
+                for key in [f'max_{idx}items_per_page_', f'max_items_per_page_{idx}']:
+                    if key in form:
+                        try:
+                            max_items_per_page = int(form[key])
+                            break
+                        except ValueError:
+                            pass
+                
+                multi_product_tab = {
+                    'type': 'multi_product',
+                    'max_items_per_page': max_items_per_page,
+                    'products': products
+                }
+                
+                print(f"DEBUG: Aggiunto tab multiprodotto con {len(products)} prodotti")
+                tabs.append(multi_product_tab)
+            else:
+                print(f"DEBUG: Nessun prodotto trovato per multiprodotto {idx}")
+    
+    # Se non abbiamo trovato nessuna scheda, proviamo un approccio completamente diverso
+    if not tabs:
+        print("DEBUG: Nessuna scheda trovata con i metodi standard, tentativo di recupero diretto")
+        
+        # Cerca tutti i possibili campi prodotto nel form
+        product_fields = {}
+        
+        for key in form:
+            # Crea un dizionario di tutti i campi che sembrano essere prodotti
+            if key.startswith('product_') and '_name_' in key:
+                idx = key.split('_name_')[1]
+                if idx not in product_fields:
+                    product_fields[idx] = {'type': 'single_product'}
+                product_fields[idx]['product_name'] = form[key]
+            
+            elif key.startswith('product_') and 'name_' in key:
+                parts = key.split('name_')
+                if len(parts) == 2:
+                    idx = parts[0].replace('product_', '')
+                    if idx not in product_fields:
+                        product_fields[idx] = {'type': 'single_product'}
+                    product_fields[idx]['product_name'] = form[key]
+        
+        # Crea schede per ogni prodotto trovato
+        for idx, fields in product_fields.items():
+            if 'product_name' in fields and fields['product_name'].strip():
+                # Questo è un prodotto singolo valido, trova gli altri campi
+                prefix = f'product_{idx}'
+                
+                # Cerca gli altri campi di questo prodotto
+                for key in form:
+                    if key.startswith(prefix):
+                        field_name = key.replace(prefix, '')
+                        if field_name.startswith('_code_'):
+                            fields['product_code'] = form[key]
+                        elif field_name.startswith('_price_'):
+                            fields['unit_price'] = form[key]
+                        # Aggiungi altri campi...
+                
+                # Se abbiamo i campi essenziali, crea la scheda
+                if 'product_code' in fields:
+                    single_product_tab = {
+                        'type': 'single_product',
+                        'product_code': fields.get('product_code', ''),
+                        'product_name': fields.get('product_name', ''),
+                        'quantity': fields.get('quantity', '1'),
+                        'unit_price': fields.get('unit_price', '0'),
+                        'description': fields.get('description', ''),
+                        'discount': '0',
+                        'discount_flag': False,
+                        'power_w': '',
+                        'volts': '',
+                        'size': '',
+                        'posizione': '',
+                        'product_image_path': ''
+                    }
+                    
+                    print(f"DEBUG: Aggiunto prodotto singolo con recupero diretto: {fields.get('product_name')}")
+                    tabs.append(single_product_tab)
+    
+    print(f"DEBUG: Processo completato. Totale schede elaborate: {len(tabs)}")
+    return tabs
+
+def get_form_value(form, possible_keys, default=''):
+    """
+    Cerca un valore nel form provando diverse possibili chiavi
+    
+    Args:
+        form: Il form da cui ottenere i valori
+        possible_keys: Lista di possibili chiavi da provare
+        default: Valore predefinito se nessuna chiave viene trovata
+        
+    Returns:
+        Il valore trovato o il default
+    """
+    for key in possible_keys:
+        if key in form:
+            return form[key]
+    return default
+
 @app.route('/')
 def index():
     offerte = get_all_offerte()
@@ -163,6 +458,8 @@ def nuova_offerta():
             return render_template('nuova_offerta.html', next_number=next_number, today_date=today_date)
         
         elif request.method == 'POST':
+            print("DEBUG - Ricevuto POST per nuova offerta")
+            
             # Crea un dizionario per la nuova offerta
             data = {
                 'date': request.form.get('date'),
@@ -172,68 +469,10 @@ def nuova_offerta():
                 'offer_description': request.form.get('offer_description'),
                 'offer_number': request.form.get('offer_number'),
                 'id': str(uuid.uuid4()),
-                'tabs': []
+                'tabs': process_form_final(request.form, request.files)
             }
             
-            # Raccogli tutti i campi tab_type
-            tab_types = {k: v for k, v in request.form.items() if k.startswith('tab_type_')}
-            
-            # Elabora tutti i tab basandosi sui campi tab_type trovati
-            for tab_key, tab_type in tab_types.items():
-                tab_index = tab_key.replace('tab_type_', '')
-                
-                if tab_type == 'single_product':
-                    # Gestione caricamento immagine
-                    product_image = request.files.get(f'product_image_{tab_index}')
-                    image_path = ''
-                    
-                    if product_image and product_image.filename and allowed_file(product_image.filename):
-                        filename = secure_filename(f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{product_image.filename}")
-                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                        product_image.save(file_path)
-                        image_path = '/static/uploads/' + filename
-                    
-                    # Crea il dizionario per il tab prodotto singolo
-                    single_product_tab = {
-                        'type': 'single_product',
-                        'product_code': request.form.get(f'product_code_{tab_index}'),
-                        'product_name': request.form.get(f'product_name_{tab_index}'),
-                        'quantity': request.form.get(f'quantity_{tab_index}'),
-                        'unit_price': request.form.get(f'unit_price_{tab_index}'),
-                        'description': request.form.get(f'description_{tab_index}'),
-                        'discount': request.form.get(f'discount_{tab_index}', '0'),
-                        'discount_flag': request.form.get(f'discount_flag_{tab_index}') == 'on',
-                        'power_w': request.form.get(f'power_w_{tab_index}'),
-                        'volts': request.form.get(f'volts_{tab_index}'),
-                        'size': request.form.get(f'size_{tab_index}'),
-                        'posizione': request.form.get(f'posizione_{tab_index}'),
-                        'product_image_path': image_path
-                    }
-                    
-                    data['tabs'].append(single_product_tab)
-                
-                elif tab_type == 'multi_product':
-                    # Ottieni il numero di prodotti in questo tab
-                    product_count = int(request.form.get(f'product_count_{tab_index}', 0))
-                    
-                    products = []
-                    for j in range(product_count):
-                        product = [
-                            request.form.get(f'product_name_{tab_index}_{j}', ''),
-                            request.form.get(f'product_model_{tab_index}_{j}', ''),
-                            request.form.get(f'product_price_{tab_index}_{j}', '0'),
-                            request.form.get(f'product_quantity_{tab_index}_{j}', '1'),
-                            request.form.get(f'product_description_{tab_index}_{j}', '')
-                        ]
-                        products.append(product)
-                    
-                    multi_product_tab = {
-                        'type': 'multi_product',
-                        'max_items_per_page': int(request.form.get(f'max_items_per_page_{tab_index}', 3)),
-                        'products': products
-                    }
-                    
-                    data['tabs'].append(multi_product_tab)
+            print(f"DEBUG - Dati offerta preparati - {len(data['tabs'])} tabs")
             
             # Salva direttamente i dati in un file JSON
             customer_folder = os.path.join(app.config['DATA_FOLDER'], data['customer'].upper())
@@ -242,8 +481,12 @@ def nuova_offerta():
             
             json_path = os.path.join(offer_folder, "dati_offerta.json")
             
+            print(f"DEBUG - Salvataggio JSON in: {json_path}")
+            
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=4, ensure_ascii=False)
+            
+            print(f"DEBUG - JSON salvato con successo")
             
             # Aggiorna indice offerte
             update_offerte_index(data, app.config['DATA_FOLDER'])
@@ -289,6 +532,8 @@ def view_offerta(offerta_id):
             flash('Offerta non trovata', 'danger')
             return redirect(url_for('index'))
         
+        print(f"DEBUG view_offerta: ID={offerta_id}, tabs={len(offerta_data.get('tabs', []))}")
+        
         return render_template('vista_offerta.html', offerta=offerta_data)
     except Exception as e:
         import traceback
@@ -310,15 +555,14 @@ def edit_offerta(offerta_id):
             return render_template('nuova_offerta.html', offerta=offerta, is_edit=True, today_date=datetime.now().strftime('%Y-%m-%d'))
             
         elif request.method == 'POST':
+            print(f"DEBUG - Ricevuto POST per modifica offerta {offerta_id}")
+            
             # Stesso approccio di nuova_offerta, ma manteniamo l'ID originale
             # Ottieni prima i dati dell'offerta esistente
             original_offerta = get_offerta_direct(offerta_id, app.config['DATA_FOLDER'])
             if not original_offerta:
                 flash('Offerta non trovata', 'danger')
                 return redirect(url_for('index'))
-            
-            # Raccogli tutti i campi tab_type
-            tab_types = {k: v for k, v in request.form.items() if k.startswith('tab_type_')}
             
             # Aggiorna i dati dell'offerta
             data = {
@@ -329,65 +573,10 @@ def edit_offerta(offerta_id):
                 'offer_description': request.form.get('offer_description'),
                 'offer_number': request.form.get('offer_number'),
                 'id': offerta_id,  # Mantieni l'ID originale
-                'tabs': []
+                'tabs': process_form_final(request.form, request.files)
             }
             
-            # Elabora tutti i tab basandosi sui campi tab_type trovati
-            for tab_key, tab_type in tab_types.items():
-                tab_index = tab_key.replace('tab_type_', '')
-                
-                if tab_type == 'single_product':
-                    # Gestione caricamento immagine
-                    product_image = request.files.get(f'product_image_{tab_index}')
-                    image_path = request.form.get(f'existing_image_{tab_index}', '')
-                    
-                    if product_image and product_image.filename and allowed_file(product_image.filename):
-                        filename = secure_filename(f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{product_image.filename}")
-                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                        product_image.save(file_path)
-                        image_path = '/static/uploads/' + filename
-                    
-                    # Crea il dizionario per il tab prodotto singolo
-                    single_product_tab = {
-                        'type': 'single_product',
-                        'product_code': request.form.get(f'product_code_{tab_index}'),
-                        'product_name': request.form.get(f'product_name_{tab_index}'),
-                        'quantity': request.form.get(f'quantity_{tab_index}'),
-                        'unit_price': request.form.get(f'unit_price_{tab_index}'),
-                        'description': request.form.get(f'description_{tab_index}'),
-                        'discount': request.form.get(f'discount_{tab_index}', '0'),
-                        'discount_flag': request.form.get(f'discount_flag_{tab_index}') == 'on',
-                        'power_w': request.form.get(f'power_w_{tab_index}'),
-                        'volts': request.form.get(f'volts_{tab_index}'),
-                        'size': request.form.get(f'size_{tab_index}'),
-                        'posizione': request.form.get(f'posizione_{tab_index}'),
-                        'product_image_path': image_path
-                    }
-                    
-                    data['tabs'].append(single_product_tab)
-                
-                elif tab_type == 'multi_product':
-                    # Ottieni il numero di prodotti in questo tab
-                    product_count = int(request.form.get(f'product_count_{tab_index}', 0))
-                    
-                    products = []
-                    for j in range(product_count):
-                        product = [
-                            request.form.get(f'product_name_{tab_index}_{j}', ''),
-                            request.form.get(f'product_model_{tab_index}_{j}', ''),
-                            request.form.get(f'product_price_{tab_index}_{j}', '0'),
-                            request.form.get(f'product_quantity_{tab_index}_{j}', '1'),
-                            request.form.get(f'product_description_{tab_index}_{j}', '')
-                        ]
-                        products.append(product)
-                    
-                    multi_product_tab = {
-                        'type': 'multi_product',
-                        'max_items_per_page': int(request.form.get(f'max_items_per_page_{tab_index}', 3)),
-                        'products': products
-                    }
-                    
-                    data['tabs'].append(multi_product_tab)
+            print(f"DEBUG - Dati offerta preparati per modifica - {len(data['tabs'])} tabs")
             
             # Mantieni il percorso PDF esistente
             if original_offerta and 'pdf_path' in original_offerta:
