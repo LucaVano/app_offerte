@@ -51,32 +51,13 @@
                                     <a href="{{ url_for('download_pdf', offerta_id=offerta.id) }}" class="btn btn-sm btn-outline-success" title="Scarica PDF">
                                         <i class="fas fa-file-pdf"></i>
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Elimina" 
-                                            data-bs-toggle="modal" data-bs-target="#deleteModal{{ offerta.id }}">
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-button" 
+                                            data-offerta-id="{{ offerta.id }}"
+                                            data-offerta-number="{{ offerta.offer_number }}"
+                                            data-offerta-customer="{{ offerta.customer }}"
+                                            title="Elimina">
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                </div>
-                                
-                                <!-- Modal di conferma eliminazione -->
-                                <div class="modal fade" id="deleteModal{{ offerta.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ offerta.id }}" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title" id="deleteModalLabel{{ offerta.id }}">Conferma eliminazione</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                Sei sicuro di voler eliminare l'offerta <strong>{{ offerta.offer_number }}</strong> per il cliente <strong>{{ offerta.customer }}</strong>?
-                                                <p class="text-danger mt-2">Questa azione non può essere annullata.</p>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-                                                <form action="{{ url_for('delete_offerta', offerta_id=offerta.id) }}" method="POST">
-                                                    <button type="submit" class="btn btn-danger">Elimina</button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -94,4 +75,52 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Un unico modal di conferma eliminazione per tutte le offerte -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Conferma eliminazione</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Sei sicuro di voler eliminare l'offerta <strong id="offertaNumber"></strong> per il cliente <strong id="offertaCustomer"></strong>?
+                <p class="text-danger mt-2">Questa azione non può essere annullata.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <form id="deleteForm" action="" method="POST">
+                    <button type="submit" class="btn btn-danger">Elimina</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Un solo modal per tutte le offerte
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        
+        // Aggiungi event listener a tutti i pulsanti di eliminazione
+        document.querySelectorAll('.delete-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const offertaId = this.getAttribute('data-offerta-id');
+                const offertaNumber = this.getAttribute('data-offerta-number');
+                const offertaCustomer = this.getAttribute('data-offerta-customer');
+                
+                // Aggiorna il contenuto del modal
+                document.getElementById('offertaNumber').textContent = offertaNumber;
+                document.getElementById('offertaCustomer').textContent = offertaCustomer;
+                
+                // Aggiorna l'action del form
+                document.getElementById('deleteForm').action = '/offerta/' + offertaId + '/elimina';
+                
+                // Mostra il modal
+                deleteModal.show();
+            });
+        });
+    });
+</script>
 {% endblock %}

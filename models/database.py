@@ -80,23 +80,61 @@ class Database:
     
     def get_offerta(self, offerta_id):
         """Ottiene una singola offerta dall'ID"""
+        print(f"DEBUG get_offerta: Caricamento offerta {offerta_id}")
         index = self.get_all_offerte()
+        
         for offerta in index:
             if offerta.get('id') == offerta_id:
                 # Carica il file JSON completo dell'offerta
                 json_path = os.path.join(self.data_folder, offerta['customer'].upper(), 
                                         offerta['offer_number'], "dati_offerta.json")
+                print(f"DEBUG: Tentativo di caricamento da {json_path}")
+                
                 try:
-                    with open(json_path, 'r', encoding='utf-8') as f:
-                        offerta_completa = json.load(f)
-                        offerta_completa['id'] = offerta_id  # Aggiungi l'ID per riferimento
-                        return offerta_completa
-                except:
-                    return offerta  # Restituisce i dati di indice se il file completo non è disponibile
-        return None
-    
+                    if os.path.exists(json_path):
+                        with open(json_path, 'r', encoding='utf-8') as f:
+                            offerta_completa = json.load(f)
+                            
+                            # Assicurati che l'ID sia incluso
+                            offerta_completa['id'] = offerta_id
+                            
+                            # Assicurati che tabs esista e sia una lista
+                            if 'tabs' not in offerta_completa or not isinstance(offerta_completa['tabs'], list):
+                                print(f"ATTENZIONE: 'tabs' mancante o non valido in {json_path}, inizializzato come lista vuota")
+                                offerta_completa['tabs'] = []
+                            
+                            print(f"DEBUG: Caricato JSON con {len(offerta_completa['tabs'])} tabs")
+                            return offerta_completa
+                    else:
+                        print(f"ERRORE: File JSON non trovato: {json_path}")
+                except Exception as e:
+                    print(f"ERRORE nel caricamento dell'offerta da {json_path}: {e}")
+                
+                # Se c'è un errore, restituisci l'oggetto di indice con tabs vuoto
+                offerta['tabs'] = []
+                return offerta
+        
+        print(f"ERRORE: Offerta {offerta_id} non trovata nell'indice")
+        return {'id': offerta_id, 'tabs': []}
+        
     def save_offerta(self, data):
         """Salva una nuova offerta e restituisce l'ID"""
+        # Debug log dei dati ricevuti
+        if isinstance(data, dict) and 'tabs' in data:
+            print(f"DEBUG save_offerta: Ricevuto dizionario con {len(data['tabs'])} tabs")
+        else:
+            print(f"DEBUG save_offerta: Ricevuto oggetto di tipo {type(data).__name__}")
+        
+        # Converti un oggetto Offerta in dizionario se necessario
+        if not isinstance(data, dict) and hasattr(data, 'to_dict'):
+            data = data.to_dict()
+            print("DEBUG: Convertito oggetto Offerta in dizionario")
+        
+        # Assicurati che tabs esista e sia una lista
+        if 'tabs' not in data or not isinstance(data['tabs'], list):
+            print("ATTENZIONE: Chiave 'tabs' mancante o non valida, inizializzata come lista vuota")
+            data['tabs'] = []
+        
         # Assegna un ID univoco
         offerta_id = str(uuid.uuid4())
         data['id'] = offerta_id
@@ -110,10 +148,27 @@ class Database:
         offer_folder = os.path.join(customer_folder, data['offer_number'])
         os.makedirs(offer_folder, exist_ok=True)
         
-        # Salva il file JSON completo
+        # Salva esplicitamente il JSON completo
         json_path = os.path.join(offer_folder, "dati_offerta.json")
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        print(f"DEBUG: Salvando JSON in {json_path} con {len(data['tabs'])} tabs")
+        
+        try:
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            print(f"DEBUG: JSON salvato con successo")
+        except Exception as e:
+            print(f"ERRORE nel salvataggio JSON: {e}")
+        
+        # Verifica che il file sia stato scritto correttamente
+        try:
+            if os.path.exists(json_path):
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    saved_data = json.load(f)
+                    print(f"DEBUG: Verifica del file JSON salvato: {len(saved_data.get('tabs', []))} tabs")
+            else:
+                print(f"ERRORE: Il file JSON non esiste dopo il salvataggio")
+        except Exception as e:
+            print(f"ERRORE nella verifica del JSON: {e}")
         
         # Aggiorna l'indice
         index = self.get_all_offerte()
@@ -126,8 +181,13 @@ class Database:
             'description': data['offer_description'][:100] + '...' if len(data['offer_description']) > 100 else data['offer_description']
         }
         index.append(index_entry)
-        with open(self.index_file, 'w', encoding='utf-8') as f:
-            json.dump(index, f, indent=4, ensure_ascii=False)
+        
+        try:
+            with open(self.index_file, 'w', encoding='utf-8') as f:
+                json.dump(index, f, indent=2, ensure_ascii=False)
+            print(f"DEBUG: Indice aggiornato con successo")
+        except Exception as e:
+            print(f"ERRORE nell'aggiornamento dell'indice: {e}")
         
         return offerta_id
     
@@ -135,10 +195,23 @@ class Database:
         """Aggiorna un'offerta esistente"""
         existing_offerta = self.get_offerta(offerta_id)
         if not existing_offerta:
+            print(f"ERRORE update_offerta: Offerta {offerta_id} non trovata")
             return False
+        
+        # Converti l'offerta in un dizionario se non lo è già
+        if not isinstance(data, dict) and hasattr(data, 'to_dict'):
+            data = data.to_dict()
+        
+        # Assicuriamoci che tabs esista e sia una lista
+        if 'tabs' not in data or not isinstance(data['tabs'], list):
+            print("ATTENZIONE update_offerta: 'tabs' mancante o non valido, inizializzato vuoto")
+            data['tabs'] = []
         
         # Conserva l'ID originale
         data['id'] = offerta_id
+        
+        # Debug
+        print(f"DEBUG update_offerta: Aggiornamento offerta {offerta_id} con {len(data['tabs'])} schede")
         
         # Gestisci il caso in cui il cliente o il numero di offerta cambi
         old_customer = existing_offerta.get('customer', '').upper()
@@ -153,8 +226,13 @@ class Database:
         # Salva il nuovo file JSON
         os.makedirs(os.path.dirname(new_folder), exist_ok=True)
         json_path = os.path.join(new_folder, "dati_offerta.json")
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
+        try:
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            print(f"DEBUG update_offerta: JSON aggiornato salvato in {json_path}")
+        except Exception as e:
+            print(f"ERRORE update_offerta: Impossibile salvare JSON in {json_path}: {e}")
+            return False
         
         # Se la posizione è cambiata, sposta tutti i file
         if old_folder != new_folder and os.path.exists(old_folder):

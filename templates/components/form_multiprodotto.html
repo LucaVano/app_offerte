@@ -115,6 +115,16 @@
                 const productCount = document.getElementById(`product_count_${tabIndex}`);
                 const newIndex = parseInt(productCount.value);
                 
+                // Ottieni il valore massimo di prodotti selezionato
+                const maxItemsSelected = getSelectedMaxItems(tabIndex);
+                
+                // Verifica se abbiamo già raggiunto il limite
+                const currentRows = table.querySelectorAll('tbody tr').length;
+                if (currentRows >= maxItemsSelected) {
+                    alert(`Non puoi aggiungere più di ${maxItemsSelected} prodotti con l'impostazione attuale.`);
+                    return;
+                }
+                
                 const newRow = document.createElement('tr');
                 newRow.className = 'product-row';
                 newRow.innerHTML = `
@@ -145,6 +155,9 @@
                 
                 // Aggiungi l'event listener al nuovo pulsante di rimozione
                 newRow.querySelector('.remove-product-btn').addEventListener('click', removeProductRow);
+                
+                // Aggiorna lo stato del pulsante "Aggiungi Prodotto"
+                updateAddButtonState(tabIndex);
             });
         });
         
@@ -160,6 +173,9 @@
                 
                 // Aggiorna il contatore e rinumera gli indici
                 updateProductIndices(table, tabIndex);
+                
+                // Aggiorna lo stato del pulsante "Aggiungi Prodotto"
+                updateAddButtonState(tabIndex);
             } else {
                 // Se è l'ultima riga, pulisci solo i campi
                 row.querySelectorAll('input').forEach(input => {
@@ -184,9 +200,75 @@
             productCount.value = rows.length;
         }
         
-        // Aggiungi event listener a tutti i pulsanti di rimozione esistenti
+        // Ottieni il valore massimo di prodotti selezionato
+        function getSelectedMaxItems(tabIndex) {
+            const radioButtons = document.querySelectorAll(`input[name="max_items_per_page_${tabIndex}"]`);
+            for (let radio of radioButtons) {
+                if (radio.checked) {
+                    return parseInt(radio.value);
+                }
+            }
+            return 3; // Valore predefinito
+        }
+        
+        // Aggiorna lo stato del pulsante "Aggiungi Prodotto" in base al numero massimo di prodotti
+        function updateAddButtonState(tabIndex) {
+            const table = document.getElementById(`products_table_${tabIndex}`);
+            const addButton = document.querySelector(`.add-product-btn[data-tab-index="${tabIndex}"]`);
+            const currentRows = table.querySelectorAll('tbody tr').length;
+            const maxItems = getSelectedMaxItems(tabIndex);
+            
+            if (currentRows >= maxItems) {
+                addButton.disabled = true;
+                addButton.title = `Non puoi aggiungere più di ${maxItems} prodotti con l'impostazione attuale.`;
+            } else {
+                addButton.disabled = false;
+                addButton.title = "Aggiungi un nuovo prodotto";
+            }
+        }
+        
+        // Aggiungi event listener ai pulsanti di rimozione esistenti
         document.querySelectorAll('.remove-product-btn').forEach(button => {
             button.addEventListener('click', removeProductRow);
+        });
+        
+        // Aggiungi event listener ai radio button per il numero massimo di prodotti
+        document.querySelectorAll('input[type="radio"][name^="max_items_per_page_"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const tabIndex = this.name.replace('max_items_per_page_', '');
+                const table = document.getElementById(`products_table_${tabIndex}`);
+                const rows = table.querySelectorAll('tbody tr');
+                const maxItems = parseInt(this.value);
+                
+                // Se ci sono più righe del massimo consentito, rimuovi le righe in eccesso
+                if (rows.length > maxItems) {
+                    const confirmRemove = confirm(`Questa impostazione permette un massimo di ${maxItems} prodotti. Verranno rimossi ${rows.length - maxItems} prodotti. Continuare?`);
+                    
+                    if (confirmRemove) {
+                        for (let i = rows.length - 1; i >= maxItems; i--) {
+                            rows[i].remove();
+                        }
+                        
+                        // Aggiorna il contatore dei prodotti
+                        const productCount = document.getElementById(`product_count_${tabIndex}`);
+                        productCount.value = maxItems;
+                    } else {
+                        // Se l'utente annulla, ripristina il radio button precedente
+                        const previousValue = rows.length > 3 ? 3 : rows.length;
+                        document.getElementById(`max_items_${previousValue}_${tabIndex}`).checked = true;
+                        return;
+                    }
+                }
+                
+                // Aggiorna lo stato del pulsante "Aggiungi Prodotto"
+                updateAddButtonState(tabIndex);
+            });
+        });
+        
+        // Inizializza lo stato dei pulsanti "Aggiungi Prodotto" per tutte le schede multiprodotto
+        document.querySelectorAll('.product-card[data-tab-type="multi_product"]').forEach(card => {
+            const tabIndex = card.getAttribute('data-tab-index');
+            updateAddButtonState(tabIndex);
         });
     });
 </script>

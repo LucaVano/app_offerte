@@ -15,6 +15,9 @@
         <a href="{{ url_for('download_pdf', offerta_id=offerta.id) }}" class="btn btn-outline-success">
             <i class="fas fa-file-pdf me-1"></i> Scarica PDF
         </a>
+        <a href="{{ url_for('debug_offerta_json', offerta_id=offerta.id) }}" target="_blank" class="btn btn-outline-info">
+            <i class="fas fa-bug me-1"></i> Debug JSON
+        </a>
     </div>
 </div>
 
@@ -45,8 +48,15 @@
     </div>
 </div>
 
+{% if not offerta.tabs or offerta.tabs|length == 0 %}
+<div class="alert alert-warning alert-permanent">
+    <h5>Attenzione!</h5>
+    <p>Questa offerta non contiene schede prodotto o i dati potrebbero essere danneggiati.</p>
+</div>
+{% endif %}
+
 {% set total_price = 0 %}
-{% for tab in offerta.tabs %}
+{% for tab in offerta.tabs|default([]) %}
     {% if tab.type == 'single_product' %}
         {% set prezzo_unitario = tab.unit_price|float %}
         {% set quantita = tab.quantity|float %}
@@ -88,7 +98,7 @@
                                 {% endif %}
                             </div>
                             <div class="col-md-6">
-                                <div class="alert alert-info">
+                                <div class="alert alert-info alert-permanent">
                                     <h5 class="alert-heading">Prezzo Totale</h5>
                                     <h3 class="mb-0">{{ "%.2f"|format(prezzo_totale) }} €</h3>
                                     <small class="text-muted">IVA esclusa</small>
@@ -139,7 +149,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for product in tab.products %}
+                            {% for product in tab.products|default([]) %}
                                 {% if product|length >= 4 %}
                                     {% set product_price = product[2]|float %}
                                     {% set product_quantity = product[3]|float %}
@@ -177,12 +187,12 @@
     <div class="card-body">
         <div class="row">
             <div class="col-md-6">
-                <p><strong>Numero Prodotti:</strong> {{ offerta.tabs|length }}</p>
+                <p><strong>Numero Prodotti:</strong> {{ offerta.tabs|default([])|length }}</p>
                 <p><strong>Data Offerta:</strong> {{ offerta.date }}</p>
                 <p><strong>Cliente:</strong> {{ offerta.customer }}</p>
             </div>
             <div class="col-md-6">
-                <div class="alert alert-success">
+                <div class="alert alert-success alert-permanent">
                     <h5>Prezzo Totale Offerta</h5>
                     <h3 class="mb-0">{{ "%.2f"|format(total_price) }} €</h3>
                     <small class="text-muted">IVA esclusa</small>

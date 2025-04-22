@@ -8,6 +8,10 @@ import datetime
 
 def generate_pdf(offerta, app_root):
     """Genera il PDF con i dati delle schede."""
+    # Assicuriamoci che tabs esista
+    if 'tabs' not in offerta or not isinstance(offerta['tabs'], list):
+        offerta['tabs'] = []
+    
     # Percorsi delle risorse
     static_folder = os.path.join(app_root, 'static')
     data_folder = os.path.join(app_root, 'data')
