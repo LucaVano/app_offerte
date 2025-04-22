@@ -25,58 +25,60 @@
                 </thead>
                 <tbody>
                     {% if tab and tab.products %}
-                        {% for product in tab.products %}
+                        {% for i in range(3) %}
                             <tr class="product-row">
                                 <td>
-                                    <input type="text" class="form-control" name="product_{{ tab_index }}name__{{ loop.index0 }}" 
-                                        value="{{ product[0] }}" required>
+                                    <input type="text" class="form-control" name="product_{{ tab_index }}name__{{ i }}" 
+                                        value="{{ tab.products[i][0] if i < tab.products|length else '' }}">
                                 </td>
                                 <td>
-                                    <input type="text" class="form-control" name="product_{{ tab_index }}model__{{ loop.index0 }}" 
-                                        value="{{ product[1] }}" required>
+                                    <input type="text" class="form-control" name="product_{{ tab_index }}model__{{ i }}" 
+                                        value="{{ tab.products[i][1] if i < tab.products|length else '' }}">
                                 </td>
                                 <td>
-                                    <input type="number" step="0.01" min="0" class="form-control" name="product_{{ tab_index }}price__{{ loop.index0 }}" 
-                                        value="{{ product[2] }}" required>
+                                    <input type="number" step="0.01" min="0" class="form-control" name="product_{{ tab_index }}price__{{ i }}" 
+                                        value="{{ tab.products[i][2] if i < tab.products|length else '0.00' }}">
                                 </td>
                                 <td>
-                                    <input type="number" step="1" min="1" class="form-control" name="product_{{ tab_index }}quantity__{{ loop.index0 }}" 
-                                        value="{{ product[3] }}" required>
+                                    <input type="number" step="1" min="1" class="form-control" name="product_{{ tab_index }}quantity__{{ i }}" 
+                                        value="{{ tab.products[i][3] if i < tab.products|length else '1' }}">
                                 </td>
                                 <td>
-                                    <input type="text" class="form-control" name="product_{{ tab_index }}description__{{ loop.index0 }}" 
-                                        value="{{ product[4] if product|length > 4 else '' }}">
+                                    <input type="text" class="form-control" name="product_{{ tab_index }}description__{{ i }}" 
+                                        value="{{ tab.products[i][4] if i < tab.products|length and tab.products[i]|length > 4 else '' }}">
                                 </td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn" disabled>
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>
                         {% endfor %}
                     {% else %}
-                        <tr class="product-row">
-                            <td>
-                                <input type="text" class="form-control" name="product_{{ tab_index }}name__0" required>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" name="product_{{ tab_index }}model__0" required>
-                            </td>
-                            <td>
-                                <input type="number" step="0.01" min="0" class="form-control" name="product_{{ tab_index }}price__0" value="0.00" required>
-                            </td>
-                            <td>
-                                <input type="number" step="1" min="1" class="form-control" name="product_{{ tab_index }}quantity__0" value="1" required>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" name="product_{{ tab_index }}description__0">
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
+                        {% for i in range(3) %}
+                            <tr class="product-row">
+                                <td>
+                                    <input type="text" class="form-control" name="product_{{ tab_index }}name__{{ i }}">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control" name="product_{{ tab_index }}model__{{ i }}">
+                                </td>
+                                <td>
+                                    <input type="number" step="0.01" min="0" class="form-control" name="product_{{ tab_index }}price__{{ i }}" value="0.00">
+                                </td>
+                                <td>
+                                    <input type="number" step="1" min="1" class="form-control" name="product_{{ tab_index }}quantity__{{ i }}" value="1">
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control" name="product_{{ tab_index }}description__{{ i }}">
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn" disabled>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
                     {% endif %}
                 </tbody>
             </table>
@@ -93,126 +95,16 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Inizializza i pulsanti per questa scheda
-        var tabIndex = "{{ tab_index }}";
-        var addBtn = document.querySelector(`.product-card[data-tab-index="${tabIndex}"] .add-product-btn`);
-        var removeButtons = document.querySelectorAll(`#products_table_${tabIndex} .remove-product-btn`);
-        
-        // Aggiungi event listener al pulsante di aggiunta
-        if (addBtn) {
-            addBtn.addEventListener('click', function() {
-                // Ottieni la tabella e il contatore prodotti
-                var table = document.getElementById(`products_table_${tabIndex}`);
-                var productCount = document.getElementById(`product_count_${tabIndex}`);
-                
-                if (!table || !productCount) {
-                    console.error('Tabella o contatore non trovati');
-                    return;
-                }
-                
-                // Verifica se abbiamo già 3 prodotti
-                var rows = table.querySelectorAll('tbody tr');
-                if (rows.length >= 3) {
-                    alert('Non puoi aggiungere più di 3 prodotti per scheda.');
-                    return;
-                }
-                
-                // Ottieni l'indice del nuovo prodotto
-                var newIndex = parseInt(productCount.value);
-                
-                // Crea una nuova riga
-                var newRow = document.createElement('tr');
-                newRow.className = 'product-row';
-                newRow.innerHTML = `
-                    <td>
-                        <input type="text" class="form-control" name="product_${tabIndex}name__${newIndex}" required>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control" name="product_${tabIndex}model__${newIndex}" required>
-                    </td>
-                    <td>
-                        <input type="number" step="0.01" min="0" class="form-control" name="product_${tabIndex}price__${newIndex}" value="0.00" required>
-                    </td>
-                    <td>
-                        <input type="number" step="1" min="1" class="form-control" name="product_${tabIndex}quantity__${newIndex}" value="1" required>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control" name="product_${tabIndex}description__${newIndex}">
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-product-btn">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                
-                // Aggiungi la riga alla tabella
-                table.querySelector('tbody').appendChild(newRow);
-                productCount.value = newIndex + 1;
-                
-                // Aggiungi l'event listener al pulsante di rimozione
-                var removeBtn = newRow.querySelector('.remove-product-btn');
-                if (removeBtn) {
-                    removeBtn.addEventListener('click', function() {
-                        removeProduct(this, tabIndex);
-                    });
-                }
-                
-                console.log(`Prodotto aggiunto alla scheda ${tabIndex}, nuovo totale: ${newIndex + 1}`);
-            });
+        // Rimuovi il pulsante "Aggiungi Prodotto" poiché abbiamo sempre 3 righe
+        const addProductBtn = document.querySelector('.add-product-btn');
+        if (addProductBtn) {
+            addProductBtn.remove();
         }
         
-        // Aggiungi event listeners ai pulsanti di rimozione esistenti
-        removeButtons.forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                removeProduct(this, tabIndex);
-            });
-        });
-        
-        // Funzione per rimuovere un prodotto
-        function removeProduct(button, tabIdx) {
-            var row = button.closest('tr');
-            var table = row.closest('table');
-            
-            // Non rimuovere l'ultima riga
-            var rows = table.querySelectorAll('tbody tr');
-            if (rows.length > 1) {
-                row.remove();
-                
-                // Aggiorna gli indici dei prodotti
-                updateProductIndices(table, tabIdx);
-            } else {
-                // Se è l'ultima riga, pulisci solo i campi
-                row.querySelectorAll('input').forEach(function(input) {
-                    input.value = input.type === 'number' ? 
-                        (input.name.includes('quantity') ? '1' : '0.00') : '';
-                });
-            }
-        }
-        
-        // Funzione per aggiornare gli indici
-        function updateProductIndices(table, tabIdx) {
-            var rows = table.querySelectorAll('tbody tr');
-            var productCount = document.getElementById(`product_count_${tabIdx}`);
-            
-            if (!productCount) {
-                console.error('Contatore prodotti non trovato');
-                return;
-            }
-            
-            rows.forEach(function(row, index) {
-                row.querySelectorAll('input').forEach(function(input) {
-                    var nameParts = input.name.split('__');
-                    if (nameParts.length === 2) {
-                        // Aggiorna solo l'indice del prodotto, mantenendo il prefisso
-                        input.name = `${nameParts[0]}__${index}`;
-                    }
-                });
-            });
-            
-            // Aggiorna il contatore dei prodotti
-            productCount.value = rows.length;
-            console.log(`Indici aggiornati, nuovo totale prodotti: ${rows.length}`);
+        // Aggiorna il contatore dei prodotti
+        const productCount = document.getElementById(`product_count_{{ tab_index }}`);
+        if (productCount) {
+            productCount.value = 3;
         }
     });
 </script>

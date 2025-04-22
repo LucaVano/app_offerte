@@ -18,6 +18,23 @@
         <a href="{{ url_for('debug_offerta_json', offerta_id=offerta.id) }}" target="_blank" class="btn btn-outline-info">
             <i class="fas fa-bug me-1"></i> Debug JSON
         </a>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-exchange-alt me-1"></i> Cambia Stato
+            </button>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" href="#" onclick="updateOfferStatus('{{ offerta.id }}', 'pending')">
+                        <i class="fas fa-clock me-2"></i> In Attesa
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="#" onclick="updateOfferStatus('{{ offerta.id }}', 'accepted')">
+                        <i class="fas fa-check me-2"></i> Accettata
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
 </div>
 
@@ -66,10 +83,10 @@
         {% set quantita = tab.quantity|float %}
         {% if tab.discount_flag %}
             {% set discount = tab.discount|float %}
-            {% set prezzo_scontato = prezzo_unitario * (1 - discount / 100) %}
-            {% set prezzo_totale = prezzo_scontato * quantita %}
+            {% set prezzo_scontato = (prezzo_unitario * (1 - discount / 100))|round(2) %}
+            {% set prezzo_totale = (prezzo_scontato * quantita)|round(2) %}
         {% else %}
-            {% set prezzo_totale = prezzo_unitario * quantita %}
+            {% set prezzo_totale = (prezzo_unitario * quantita)|round(2) %}
         {% endif %}
         {% set grand_total = grand_total + prezzo_totale %}
 
@@ -104,7 +121,7 @@
                             <div class="col-md-6">
                                 <div class="alert alert-info alert-permanent">
                                     <h5 class="alert-heading">Prezzo Totale</h5>
-                                    <h3 class="mb-0">{{ "%.2f"|format(prezzo_totale) }} €</h3>
+                                    <h3 class="mb-0" data-price="{{ prezzo_totale }}">{{ "%.2f"|format(prezzo_totale) }} €</h3>
                                     <small class="text-muted">IVA esclusa</small>
                                 </div>
                             </div>
@@ -131,21 +148,16 @@
                 </div>
             </div>
         </div>
-    {% endif %}
-{% endfor %}
-
-<!-- Poi visualizziamo tutte le schede multiprodotto -->
-{% for tab in offerta.tabs %}
-    {% if tab.type == 'multi_product' %}
-        <!-- Calcolo del prezzo totale per il multiprodotto -->
+    {% elif tab.type == 'multi_product' %}
         {% set multi_product_total = 0 %}
+        {% set filled_products = 0 %}
         
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-light">
                 <h5 class="card-title mb-0">Scheda Multiprodotto</h5>
             </div>
             <div class="card-body">
-                <p><strong>Prodotti per pagina:</strong> {{ tab.max_items_per_page|default(3) }}</p>
+                <p><strong>Prodotti per pagina:</strong> <span id="filled-products-count">0</span></p>
                 
                 <div class="table-responsive">
                     <table class="table table-bordered table-hover">
@@ -161,10 +173,11 @@
                         </thead>
                         <tbody>
                             {% for product in tab.products %}
-                                {% if product|length >= 4 %}
+                                {% if product|length >= 4 and product[0] and product[1] and product[2] and product[3] %}
+                                    {% set filled_products = filled_products + 1 %}
                                     {% set product_price = product[2]|float %}
                                     {% set product_quantity = product[3]|float %}
-                                    {% set product_total = product_price * product_quantity %}
+                                    {% set product_total = (product_price * product_quantity)|round(2) %}
                                     {% set multi_product_total = multi_product_total + product_total %}
                                     <tr>
                                         <td>{{ product[0] }}</td>
@@ -180,7 +193,7 @@
                         <tfoot>
                             <tr class="table-light">
                                 <th colspan="4" class="text-end">Totale multiprodotto:</th>
-                                <th>{{ "%.2f"|format(multi_product_total) }} €</th>
+                                <th id="multi-product-total" data-total="{{ multi_product_total }}">{{ "%.2f"|format(multi_product_total) }} €</th>
                                 <th></th>
                             </tr>
                         </tfoot>
@@ -194,30 +207,184 @@
 {% endfor %}
 
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-light">
-        <h5 class="card-title mb-0">Riepilogo Offerta</h5>
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-file-alt me-2"></i> Riepilogo Offerta
+        </h5>
     </div>
     <div class="card-body">
         <div class="row">
             <div class="col-md-6">
-                <p><strong>Numero Prodotti:</strong> {{ offerta.tabs|default([])|length }}</p>
-                <p><strong>Data Offerta:</strong> {{ offerta.date }}</p>
+                <p><strong>Numero Offerta:</strong> {{ offerta.offer_number }}</p>
+                <p><strong>Data:</strong> {{ offerta.date }}</p>
                 <p><strong>Cliente:</strong> {{ offerta.customer }}</p>
+                <p><strong>Email Cliente:</strong> {{ offerta.customer_email }}</p>
+                <p><strong>Indirizzo:</strong> {{ offerta.address }}</p>
             </div>
             <div class="col-md-6">
-                <div class="alert alert-success alert-permanent">
-                    <h5>Prezzo Totale Offerta</h5>
-                    <h3 class="mb-0" id="grand-total">{{ "%.2f"|format(grand_total) }} €</h3>
-                    <small class="text-muted">IVA esclusa</small>
+                <p><strong>Descrizione:</strong> {{ offerta.offer_description }}</p>
+                <div class="alert alert-success alert-permanent mt-3">
+                    <h5 class="mb-0">Prezzo Totale: <span id="totalPrice">€0.00</span></h5>
                 </div>
             </div>
         </div>
         
-        <div class="d-flex justify-content-center mt-4">
-            <a href="{{ url_for('download_pdf', offerta_id=offerta.id) }}" class="btn btn-success btn-lg">
-                <i class="fas fa-file-pdf me-2"></i> Scarica PDF
+        <div class="mt-4">
+            <a href="{{ url_for('download_pdf', offerta_id=offerta.id) }}" class="btn btn-primary me-2">
+                <i class="fas fa-file-pdf me-2"></i> Genera PDF
             </a>
+            <button class="btn btn-success" onclick="saveOffer()">
+                <i class="fas fa-save me-2"></i> Salva Offerta
+            </button>
+        </div>
+
+        <!-- Messaggio di stato spostato in fondo -->
+        <div class="alert {% if offerta.status == 'accepted' %}alert-success{% else %}alert-warning{% endif %} alert-permanent mt-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas {% if offerta.status == 'accepted' %}fa-check-circle{% else %}fa-clock{% endif %} me-2"></i>
+                    <strong>Stato attuale:</strong> 
+                    {% if offerta.status == 'accepted' %}
+                        Offerta Accettata
+                    {% else %}
+                        Offerta in Attesa
+                    {% endif %}
+                </div>
+                <div>
+                    <button class="btn btn-sm {% if offerta.status == 'accepted' %}btn-warning{% else %}btn-success{% endif %} me-2" 
+                            onclick="updateOfferStatus('{{ offerta.id }}', '{% if offerta.status == 'accepted' %}pending{% else %}accepted{% endif %}')">
+                        <i class="fas {% if offerta.status == 'accepted' %}fa-clock{% else %}fa-check-circle{% endif %} me-1"></i>
+                        {% if offerta.status == 'accepted' %}
+                            Metti in Attesa
+                        {% else %}
+                            Accetta Offerta
+                        {% endif %}
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="saveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="fas fa-check-circle text-success me-2"></i>
+            <strong class="me-auto">Successo</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            Offerta salvata con successo!
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Aggiorna i totali nella visualizzazione dell'offerta
+    function updateTotals() {
+        let grandTotal = 0;
+        
+        // Calcola il totale dei prodotti singoli (prezzi totali in azzurro)
+        document.querySelectorAll('.alert-info h3[data-price]').forEach(priceElement => {
+            const price = parseFloat(priceElement.getAttribute('data-price')) || 0;
+            grandTotal += price;
+        });
+        
+        // Calcola il totale dei prodotti multipli e aggiorna i conteggi
+        document.querySelectorAll('#multi-product-total').forEach(totalElement => {
+            const multiProductTotal = parseFloat(totalElement.getAttribute('data-total')) || 0;
+            grandTotal += multiProductTotal;
+            
+            // Conta i prodotti effettivamente compilati nella tabella
+            const table = totalElement.closest('table');
+            if (table) {
+                let filledRows = 0;
+                
+                // Calcola il numero di righe compilate
+                table.querySelectorAll('tbody tr').forEach(row => {
+                    const quantityCell = row.querySelector('.product-quantity');
+                    if (quantityCell) {
+                        filledRows++;
+                    }
+                });
+                
+                // Aggiorna il conteggio dei prodotti per pagina
+                const filledProductsCount = table.closest('.card').querySelector('#filled-products-count');
+                if (filledProductsCount) {
+                    filledProductsCount.textContent = filledRows;
+                }
+            }
+        });
+        
+        // Aggiorna il totale generale nell'alert verde
+        const grandTotalElement = document.querySelector('.alert-success h3');
+        if (grandTotalElement) {
+            grandTotalElement.textContent = grandTotal.toFixed(2) + ' €';
+            grandTotalElement.setAttribute('data-total', grandTotal);
+        }
+    }
+    
+    // Chiama updateTotals quando la pagina è caricata
+    updateTotals();
+});
+
+function updateOfferStatus(offerId, newStatus) {
+    fetch(`/update_offer_status/${offerId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Ricarica la pagina per mostrare il nuovo stato
+            window.location.reload();
+        } else {
+            alert('Errore durante l\'aggiornamento dello stato dell\'offerta');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Errore durante l\'aggiornamento dello stato dell\'offerta');
+    });
+}
+
+function saveOffer() {
+    fetch(`/offerta/{{ offerta.id }}/salva`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mostra il toast di successo
+            const toast = new bootstrap.Toast(document.getElementById('saveToast'));
+            toast.show();
+        } else {
+            // Mostra un toast di errore
+            const toastElement = document.getElementById('saveToast');
+            toastElement.querySelector('.toast-header i').className = 'fas fa-exclamation-circle text-danger me-2';
+            toastElement.querySelector('.toast-header strong').textContent = 'Errore';
+            toastElement.querySelector('.toast-body').textContent = `Errore durante il salvataggio: ${data.error}`;
+            const toast = new bootstrap.Toast(toastElement);
+            toast.show();
+        }
+    })
+    .catch(error => {
+        // Mostra un toast di errore
+        const toastElement = document.getElementById('saveToast');
+        toastElement.querySelector('.toast-header i').className = 'fas fa-exclamation-circle text-danger me-2';
+        toastElement.querySelector('.toast-header strong').textContent = 'Errore';
+        toastElement.querySelector('.toast-body').textContent = 'Errore durante il salvataggio. Riprova più tardi.';
+        const toast = new bootstrap.Toast(toastElement);
+        toast.show();
+    });
+}
+</script>
 {% endblock %}

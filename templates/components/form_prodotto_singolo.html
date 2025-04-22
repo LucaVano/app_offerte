@@ -66,7 +66,7 @@
             <div class="col-md-6 d-flex align-items-end">
                 <div class="form-check mt-3">
                     <input class="form-check-input discount-checkbox" type="checkbox" id="discount_flag_{{ tab_index }}" name="discount_{{ tab_index }}flag_"
-                        {{ 'checked' if tab and tab.discount_flag else '' }} onchange="toggleDiscount(this)">
+                        {{ 'checked' if tab and tab.discount_flag else '' }}>
                     <label class="form-check-label" for="discount_flag_{{ tab_index }}">
                         Applicare sconto
                     </label>
@@ -94,20 +94,6 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Trova tutti i checkbox per lo sconto in questa scheda
-        var discountCheckbox = document.getElementById('discount_flag_{{ tab_index }}');
-        var discountInput = document.getElementById('discount_{{ tab_index }}');
-        
-        if (discountCheckbox && discountInput) {
-            // Imposta lo stato iniziale
-            discountInput.disabled = !discountCheckbox.checked;
-            
-            // Aggiungi event listener
-            discountCheckbox.addEventListener('change', function() {
-                // Attiva/disattiva il campo sconto in base allo stato del checkbox
-                discountInput.disabled = !this.checked;
-                console.log("Discount toggle per tab {{ tab_index }}:", this.checked);
-            });
-        }
+        // Rimuovo il codice che disabilita il campo sconto
     });
 </script>

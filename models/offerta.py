@@ -1,25 +1,32 @@
 class Offerta:
     """Classe che rappresenta un'offerta commerciale."""
     
-    def __init__(self, data=None):
+    def __init__(self, id=None, offer_number=None, date=None, customer=None, customer_email=None, 
+                 address=None, offer_description=None, tabs=None, status='pending'):
         """
         Inizializza un'offerta con i dati forniti
         
         Args:
-            data (dict): Dizionario contenente i dati dell'offerta
+            id (str): ID dell'offerta
+            offer_number (str): Numero dell'offerta
+            date (str): Data dell'offerta
+            customer (str): Nome del cliente
+            customer_email (str): Email del cliente
+            address (str): Indirizzo del cliente
+            offer_description (str): Descrizione dell'offerta
+            tabs (list): Lista di tabulazioni dell'offerta
+            status (str): Stato dell'offerta ('pending' o 'accepted')
         """
-        if data is None:
-            data = {}
-            
-        self.id = data.get('id', '')
-        self.offer_number = data.get('offer_number', '')
-        self.date = data.get('date', '')
-        self.customer = data.get('customer', '')
-        self.customer_email = data.get('customer_email', '')
-        self.address = data.get('address', '')
-        self.offer_description = data.get('offer_description', '')
-        self.tabs = data.get('tabs', [])
-        self.pdf_path = data.get('pdf_path', '')
+        self.id = id
+        self.offer_number = offer_number
+        self.date = date
+        self.customer = customer
+        self.customer_email = customer_email
+        self.address = address
+        self.offer_description = offer_description
+        self.tabs = tabs or []
+        self.status = status
+        self.pdf_path = ''
     
     def to_dict(self):
         """
@@ -37,7 +44,8 @@ class Offerta:
             'address': self.address,
             'offer_description': self.offer_description,
             'tabs': self.tabs,
-            'pdf_path': self.pdf_path
+            'pdf_path': self.pdf_path,
+            'status': self.status
         }
     
     def get_total_price(self):

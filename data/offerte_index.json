@@ -1,37 +1,5 @@
 [
     {
-        "id": "376b0f22-303c-483c-b775-2ef9b4b710bf",
-        "offer_number": "2025-0026",
-        "date": "2025-04-22",
-        "customer": "Marnia",
-        "customer_email": "danielev98@virgilio.it",
-        "description": ""
-    },
-    {
-        "id": "3c9446e2-2e36-43c2-b34f-e1e3311dbaab",
-        "offer_number": "2025-0027",
-        "date": "2025-04-22",
-        "customer": "Gigio",
-        "customer_email": "danielev98@virgilio.it",
-        "description": ""
-    },
-    {
-        "id": "ce1177a2-fcbf-445a-9156-6646184bcafa",
-        "offer_number": "2025-0028",
-        "date": "2025-04-22",
-        "customer": "qwerty",
-        "customer_email": "danielev98@virgilio.it",
-        "description": ""
-    },
-    {
-        "id": "6a7ce6ed-3654-43ef-92b2-209b98b6ac35",
-        "offer_number": "2025-0029",
-        "date": "2025-04-22",
-        "customer": "cubciuadbco",
-        "customer_email": "danielev98@virgilio.it",
-        "description": ""
-    },
-    {
         "id": "12ac3cf5-d652-403a-8d2f-565b4dfdf7ea",
         "offer_number": "2025-0030",
         "date": "2025-04-22",
@@ -61,6 +29,118 @@
         "date": "2025-04-22",
         "customer": "hfihbfgisdhbg",
         "customer_email": "danielev98@virgilio.it",
+        "description": ""
+    },
+    {
+        "id": "fa68b891-e044-407a-aa3d-e9516c2d94b3",
+        "offer_number": "2025-0035",
+        "date": "2025-04-22",
+        "customer": "fiqbfdiabh",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "66bd8910-4071-44ce-813c-b1b230db727a",
+        "offer_number": "2025-0039",
+        "date": "2025-04-22",
+        "customer": "ivihbdojcxjona",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "d4baeec5-1139-4f76-9235-bb6c3631916d",
+        "offer_number": "2025-0042",
+        "date": "2025-04-22",
+        "customer": "MOKI",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "788eb778-c655-46ad-862d-e0a70282b077",
+        "offer_number": "2025-0043",
+        "date": "2025-04-22",
+        "customer": "fhfoueqwhfouqe",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": "ckqjbeqivcqoudcbqdbcjqdbcjad"
+    },
+    {
+        "id": "a20b3eec-9ef9-4835-ab12-a97b7f7254f8",
+        "offer_number": "2025-0044",
+        "date": "2025-04-22",
+        "customer": "hfwiefbowuv",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "bbff34e6-73b1-4f63-a719-2d701515fe7c",
+        "offer_number": "2025-0045",
+        "date": "2025-04-22",
+        "customer": "fhqiefbiqebf",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "208dd5ec-114b-47b4-92c6-8f5fa9ebeb90",
+        "offer_number": "2025-0047",
+        "date": "2025-04-22",
+        "customer": "fyueqfygqiydf",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "3d89b1ab-071a-4e75-8dd8-1ef493c57cc6",
+        "offer_number": "2025-0048",
+        "date": "2025-04-22",
+        "customer": "iheqfbqibef",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "5f8ee0d0-73f6-47ae-971f-17666fb0723d",
+        "offer_number": "2025-0049",
+        "date": "2025-04-22",
+        "customer": "feqhfbhiqe",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "1a96df47-6aca-4815-bd2e-2d1d1c37b4b6",
+        "offer_number": "2025-0050",
+        "date": "2025-04-22",
+        "customer": "fkehqbfqe",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "32992c57-80df-4e34-bd4c-c06c2b2f0f26",
+        "offer_number": "2025-0052",
+        "date": "2025-04-22",
+        "customer": "fidsfdajbf",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "bdf2fc40-7e4c-47cc-bfe9-93f54ea2bb2d",
+        "offer_number": "2025-0053",
+        "date": "2025-04-22",
+        "customer": "qfhifbidahf",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "2ac029cf-fef2-4325-b6bb-260806b7ee10",
+        "offer_number": "2025-0054",
+        "date": "2025-04-22",
+        "customer": "wdjhqfhadf",
+        "customer_email": "lucavanov8@gmail.com",
+        "description": ""
+    },
+    {
+        "id": "a72002b9-d154-48d4-8361-796503eeaff8",
+        "offer_number": "2025-0057",
+        "date": "2025-04-22",
+        "customer": "cjdqjadfjdal",
+        "customer_email": "lucavanov8@gmail.com",
         "description": ""
     }
 ]

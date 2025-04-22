@@ -139,15 +139,42 @@ def get_offerta_direct(offerta_id, data_folder):
         return None
 
 def get_all_offerte():
-    """Restituisce tutte le offerte dall'indice"""
-    index_file = os.path.join(app.config['DATA_FOLDER'], "offerte_index.json")
+    """Restituisce tutte le offerte dalla repository data"""
+    offers = []
+    data_folder = app.config['DATA_FOLDER']
+    
     try:
-        if os.path.exists(index_file):
-            with open(index_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+        # Scansiona tutte le cartelle dei clienti
+        for customer_folder in os.listdir(data_folder):
+            customer_path = os.path.join(data_folder, customer_folder)
+            if os.path.isdir(customer_path):
+                # Scansiona tutte le cartelle delle offerte
+                for offer_folder in os.listdir(customer_path):
+                    offer_path = os.path.join(customer_path, offer_folder)
+                    if os.path.isdir(offer_path):
+                        json_path = os.path.join(offer_path, "dati_offerta.json")
+                        if os.path.exists(json_path):
+                            try:
+                                with open(json_path, 'r', encoding='utf-8') as f:
+                                    offer_data = json.load(f)
+                                    # Migra gli stati vecchi al nuovo formato
+                                    if 'status' not in offer_data:
+                                        offer_data['status'] = 'in_attesa'
+                                    elif offer_data['status'] == 'pending':
+                                        offer_data['status'] = 'in_attesa'
+                                    elif offer_data['status'] == 'accepted':
+                                        offer_data['status'] = 'accettata'
+                                    offers.append(offer_data)
+                            except Exception as e:
+                                print(f"Errore nel caricamento dell'offerta {offer_folder}: {str(e)}")
+                                continue
+        
+        # Ordina le offerte per data (più recenti prima)
+        offers.sort(key=lambda x: x.get('date', ''), reverse=True)
+        return offers
     except Exception as e:
-        print(f"ERRORE nel caricamento dell'indice: {e}")
-    return []
+        print(f"Errore nel caricamento delle offerte: {str(e)}")
+        return []
 
 def process_form_final(form, files):
     """
@@ -278,90 +305,26 @@ def process_form_final(form, files):
                 print(f"DEBUG: Saltato prodotto singolo per tab {idx} - dati essenziali mancanti")
         
         elif tab_type == 'multi_product':
-            # GESTIONE MULTIPRODOTTO
-            print(f"DEBUG: Elaborazione multiprodotto {idx}")
-            
-            # Recupera i prodotti per questa scheda
             products = []
-            
-            # Se abbiamo già trovato gli indici dei prodotti per questa scheda
-            if idx in product_indices:
-                print(f"DEBUG: Trovati {len(product_indices[idx])} prodotti per tab {idx}")
-                
-                for prod_idx in sorted(product_indices[idx]):
-                    # Costruisci i nomi dei campi per questo prodotto
-                    name_key = f'product_{idx}name__{prod_idx}'
-                    model_key = f'product_{idx}model__{prod_idx}'
-                    price_key = f'product_{idx}price__{prod_idx}'
-                    quantity_key = f'product_{idx}quantity__{prod_idx}'
-                    description_key = f'product_{idx}description__{prod_idx}'
+            # Cerca tutti i prodotti per questa scheda
+            for i in range(3):  # Abbiamo sempre 3 righe
+                name = get_form_value(form, [f'product_{idx}name__{i}'])
+                if name and name.strip():  # Solo se il nome è compilato
+                    model = get_form_value(form, [f'product_{idx}model__{i}'])
+                    price = get_form_value(form, [f'product_{idx}price__{i}'], '0')
+                    quantity = get_form_value(form, [f'product_{idx}quantity__{i}'], '1')
+                    description = get_form_value(form, [f'product_{idx}description__{i}'])
                     
-                    # Solo se abbiamo il nome del prodotto
-                    if name_key in form and form[name_key].strip():
-                        product = [
-                            form.get(name_key, ''),
-                            form.get(model_key, ''),
-                            form.get(price_key, '0'),
-                            form.get(quantity_key, '1'),
-                            form.get(description_key, '')
-                        ]
-                        print(f"DEBUG: Aggiunto prodotto {prod_idx} in multiprodotto {idx}: {product[0]}")
-                        products.append(product)
+                    products.append([name, model, price, quantity, description])
             
-            # Se non abbiamo trovato prodotti con l'approccio diretto, proviamo un altro metodo
-            if not products:
-                print(f"DEBUG: Tentando approccio alternativo per i prodotti del tab {idx}")
-                
-                # Cerca tutti i possibili campi prodotto per questa scheda
-                product_name_keys = []
-                for key in form:
-                    if f'product_{idx}name__' in key and form[key].strip():
-                        product_name_keys.append(key)
-                
-                for name_key in product_name_keys:
-                    try:
-                        # Estrai l'indice del prodotto dal nome del campo
-                        prod_idx = int(name_key.split('__')[1])
-                        
-                        # Altri campi di questo prodotto
-                        model_key = f'product_{idx}model__{prod_idx}'
-                        price_key = f'product_{idx}price__{prod_idx}'
-                        quantity_key = f'product_{idx}quantity__{prod_idx}'
-                        description_key = f'product_{idx}description__{prod_idx}'
-                        
-                        product = [
-                            form.get(name_key, ''),
-                            form.get(model_key, ''),
-                            form.get(price_key, '0'),
-                            form.get(quantity_key, '1'),
-                            form.get(description_key, '')
-                        ]
-                        print(f"DEBUG: Aggiunto prodotto con approccio alternativo: {product[0]}")
-                        products.append(product)
-                    except (ValueError, IndexError):
-                        print(f"DEBUG: Errore parsing indice prodotto da {name_key}")
+            multi_product_tab = {
+                'type': 'multi_product',
+                'products': products,
+                'max_items_per_page': 3
+            }
             
-            # Se abbiamo trovato dei prodotti, crea la scheda multiprodotto
-            if products:
-                max_items_per_page = 3  # Default
-                for key in [f'max_{idx}items_per_page_', f'max_items_per_page_{idx}']:
-                    if key in form:
-                        try:
-                            max_items_per_page = int(form[key])
-                            break
-                        except ValueError:
-                            pass
-                
-                multi_product_tab = {
-                    'type': 'multi_product',
-                    'max_items_per_page': max_items_per_page,
-                    'products': products
-                }
-                
-                print(f"DEBUG: Aggiunto tab multiprodotto con {len(products)} prodotti")
-                tabs.append(multi_product_tab)
-            else:
-                print(f"DEBUG: Nessun prodotto trovato per multiprodotto {idx}")
+            print(f"DEBUG: Aggiunta scheda multiprodotto con {len(products)} prodotti")
+            tabs.append(multi_product_tab)
     
     # Se non abbiamo trovato nessuna scheda, proviamo un approccio completamente diverso
     if not tabs:
@@ -445,8 +408,24 @@ def get_form_value(form, possible_keys, default=''):
 
 @app.route('/')
 def index():
-    offerte = get_all_offerte()
-    return render_template('index.html', offerte=offerte)
+    try:
+        # Carica tutte le offerte dalla repository
+        offers = get_all_offerte()
+        
+        # Dividi le offerte per stato
+        pending_offers = [offer for offer in offers if offer.get('status', 'pending') == 'pending']
+        accepted_offers = [offer for offer in offers if offer.get('status', 'pending') == 'accepted']
+        
+        return render_template('index.html', 
+                            all_offers=offers,
+                            pending_offers=pending_offers,
+                            accepted_offers=accepted_offers)
+    except Exception as e:
+        flash(f'Errore durante il caricamento delle offerte: {str(e)}', 'error')
+        return render_template('index.html', 
+                            all_offers=[],
+                            pending_offers=[],
+                            accepted_offers=[])
 
 @app.route('/nuova-offerta', methods=['GET', 'POST'])
 def nuova_offerta():
@@ -469,7 +448,8 @@ def nuova_offerta():
                 'offer_description': request.form.get('offer_description'),
                 'offer_number': request.form.get('offer_number'),
                 'id': str(uuid.uuid4()),
-                'tabs': process_form_final(request.form, request.files)
+                'tabs': process_form_final(request.form, request.files),
+                'status': 'in_attesa'  # Impostiamo lo stato iniziale come 'in_attesa'
             }
             
             print(f"DEBUG - Dati offerta preparati - {len(data['tabs'])} tabs")
@@ -659,8 +639,10 @@ def download_pdf(offerta_id):
 @app.route('/offerta/<offerta_id>/elimina', methods=['POST'])
 def delete_offerta(offerta_id):
     try:
+        print(f"Ricevuta richiesta di eliminazione per offerta {offerta_id}")
         offerta = get_offerta_direct(offerta_id, app.config['DATA_FOLDER'])
         if not offerta:
+            print(f"Offerta non trovata: {offerta_id}")
             flash('Offerta non trovata', 'danger')
             return redirect(url_for('index'))
         
@@ -681,22 +663,114 @@ def delete_offerta(offerta_id):
         
         if os.path.exists(offer_folder):
             shutil.rmtree(offer_folder)
+            print(f"Cartella offerta eliminata: {offer_folder}")
         
         # Se la cartella cliente è vuota, rimuovi anche quella
         if os.path.exists(customer_folder) and not os.listdir(customer_folder):
             shutil.rmtree(customer_folder)
+            print(f"Cartella cliente eliminata: {customer_folder}")
         
+        print(f"Offerta eliminata con successo: {offerta_id}")
         flash('Offerta eliminata con successo', 'success')
+        return jsonify({'success': True})
     except Exception as e:
         print(f"ERRORE nell'eliminazione dell'offerta: {e}")
         flash(f'Errore durante l\'eliminazione dell\'offerta: {str(e)}', 'danger')
-    
-    return redirect(url_for('index'))
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/next-offer-number', methods=['GET'])
 def api_next_offer_number():
     next_number = get_next_offer_number()
     return jsonify({'next_number': next_number})
+
+@app.route('/update_offer_status/<offer_id>', methods=['POST'])
+def update_offer_status(offer_id):
+    try:
+        print(f"Ricevuta richiesta di aggiornamento stato per offerta {offer_id}")
+        new_status = request.form.get('status')
+        print(f"Nuovo stato richiesto: {new_status}")
+        
+        if new_status not in ['in_attesa', 'accettata']:
+            print(f"Stato non valido: {new_status}")
+            return jsonify({'success': False, 'error': 'Stato non valido'}), 400
+            
+        # Ottieni l'offerta direttamente dal file JSON
+        offerta_data = get_offerta_direct(offer_id, app.config['DATA_FOLDER'])
+        
+        if not offerta_data:
+            print(f"Offerta non trovata: {offer_id}")
+            return jsonify({'success': False, 'error': 'Offerta non trovata'}), 404
+        
+        print(f"Stato attuale: {offerta_data.get('status')}, Nuovo stato: {new_status}")
+        
+        # Aggiorna lo stato
+        offerta_data['status'] = new_status
+        
+        # Salva i dati aggiornati
+        customer_folder = os.path.join(app.config['DATA_FOLDER'], offerta_data['customer'].upper())
+        offer_folder = os.path.join(customer_folder, offerta_data['offer_number'])
+        os.makedirs(offer_folder, exist_ok=True)
+        
+        json_path = os.path.join(offer_folder, "dati_offerta.json")
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(offerta_data, f, indent=4, ensure_ascii=False)
+        
+        # Aggiorna l'indice
+        update_offerte_index(offerta_data, app.config['DATA_FOLDER'])
+        
+        print(f"Stato aggiornato con successo per offerta {offer_id}")
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Errore durante l'aggiornamento dello stato: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/offerta/<offerta_id>/salva', methods=['POST'])
+def save_offerta(offerta_id):
+    try:
+        # Ottieni l'offerta direttamente dal file JSON
+        offerta_data = get_offerta_direct(offerta_id, app.config['DATA_FOLDER'])
+        
+        if not offerta_data:
+            return jsonify({'success': False, 'error': 'Offerta non trovata'}), 404
+        
+        # Assicurati che l'offerta abbia uno stato
+        if 'status' not in offerta_data:
+            offerta_data['status'] = 'pending'
+        
+        # Aggiorna l'indice delle offerte
+        update_offerte_index(offerta_data, app.config['DATA_FOLDER'])
+        
+        # Salva i dati aggiornati
+        customer_folder = os.path.join(app.config['DATA_FOLDER'], offerta_data['customer'].upper())
+        offer_folder = os.path.join(customer_folder, offerta_data['offer_number'])
+        os.makedirs(offer_folder, exist_ok=True)
+        
+        json_path = os.path.join(offer_folder, "dati_offerta.json")
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(offerta_data, f, indent=4, ensure_ascii=False)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Errore durante il salvataggio dell'offerta: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/offerte-in-attesa')
+def offerte_in_attesa():
+    offers = get_all_offerte()
+    pending_offers = [offer for offer in offers if offer.get('status') == 'in_attesa']
+    return render_template('filtered_offers.html', 
+                         title='Offerte in Attesa',
+                         icon='fa-clock',
+                         offers=pending_offers)
+
+@app.route('/offerte-accettate')
+def offerte_accettate():
+    offers = get_all_offerte()
+    accepted_offers = [offer for offer in offers if offer.get('status') == 'accettata']
+    return render_template('filtered_offers.html',
+                         title='Offerte Accettate',
+                         icon='fa-check-circle',
+                         offers=accepted_offers)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

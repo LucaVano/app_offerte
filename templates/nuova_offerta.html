@@ -155,7 +155,15 @@
             addRemoveTabEventListener();
             
             // Inizializza la funzione toggleDiscount per questa scheda
-            initToggleDiscount(currentTabIndex - 1);
+            const newCheckbox = newElement.querySelector('.discount-checkbox');
+            const newDiscountInput = newElement.querySelector(`#discount_${currentTabIndex - 1}`);
+            if (newCheckbox && newDiscountInput) {
+                newCheckbox.addEventListener('change', function() {
+                    newDiscountInput.disabled = !this.checked;
+                });
+                // Imposta lo stato iniziale
+                newDiscountInput.disabled = !newCheckbox.checked;
+            }
             
             // Aggiorna tutti gli indici per essere sicuri
             updateTabIndices();
@@ -299,13 +307,13 @@
         // Inizializza la funzione toggleDiscount per tutte le schede esistenti
         function initToggleDiscount(index) {
             const checkbox = document.getElementById(`discount_flag_${index}`);
-            if (checkbox) {
+            const discountInput = document.getElementById(`discount_${index}`);
+            if (checkbox && discountInput) {
                 checkbox.addEventListener('change', function() {
-                    const discountInput = document.getElementById(`discount_${index}`);
-                    if (discountInput) {
-                        discountInput.disabled = !this.checked;
-                    }
+                    discountInput.disabled = !this.checked;
                 });
+                // Imposta lo stato iniziale
+                discountInput.disabled = !checkbox.checked;
             }
         }
         

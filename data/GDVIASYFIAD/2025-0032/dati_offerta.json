@@ -23,5 +23,6 @@
             "product_image_path": "/static/uploads/20250422152309_Pizza.png"
         }
     ],
-    "pdf_path": "offerta_2025-0032.pdf"
+    "pdf_path": "offerta_2025-0032.pdf",
+    "status": "accettata"
 }

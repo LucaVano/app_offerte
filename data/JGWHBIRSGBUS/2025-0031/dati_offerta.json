@@ -20,11 +20,10 @@
             "volts": "",
             "size": "",
             "posizione": "11",
-            "product_image_path": "/static/uploads/20250422151422_Pizza.png"
+            "product_image_path": ""
         },
         {
             "type": "multi_product",
-            "max_items_per_page": 3,
             "products": [
                 [
                     "khoaudhfo",
@@ -33,7 +32,8 @@
                     "1",
                     ""
                 ]
-            ]
+            ],
+            "max_items_per_page": 3
         }
     ],
     "pdf_path": "offerta_2025-0031.pdf"

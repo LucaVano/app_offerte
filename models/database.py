@@ -143,8 +143,12 @@ class Database:
         if not data.get('offer_number'):
             data['offer_number'] = self.get_next_offer_number()
         
+        # Pulisci il nome del cliente rimuovendo spazi extra
+        customer_name = data['customer'].strip()
+        data['customer'] = customer_name
+        
         # Crea le cartelle per il cliente e l'offerta
-        customer_folder = os.path.join(self.data_folder, data['customer'].upper())
+        customer_folder = os.path.join(self.data_folder, customer_name.upper())
         offer_folder = os.path.join(customer_folder, data['offer_number'])
         os.makedirs(offer_folder, exist_ok=True)
         

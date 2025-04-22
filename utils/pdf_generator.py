@@ -469,6 +469,75 @@ def generate_pdf(offerta, app_root):
             c.setFont("Times-Roman", 7)
             c.drawString(50, height - diff - 60, "I modelli e le specifiche tecniche dei prodotti indicati possono subire variazioni senza preavviso.")
     
+    # Aggiungi pagina prezzo totale
+    c.showPage()
+    c.setFont("Times-Roman", 16)
+    
+    # Intestazione
+    try:
+        img = ImageReader(logo_valtservice_path)
+        img_width, img_height = img.getSize()
+        aspect_ratio = img_width / img_height
+        max_width, max_height = 200, 100
+        if img_width > max_width or img_height > max_height:
+            if img_width > img_height:
+                new_width = max_width
+                new_height = new_width / aspect_ratio
+            else:
+                new_height = max_height
+                new_width = new_height * aspect_ratio
+        else:
+            new_width, new_height = img_width, img_height
+        c.drawImage(img, 50, height - new_height - 20, width=new_width, height=new_height)
+    except Exception as e:
+        print("Logo non caricato:", e)
+    
+    try:
+        img = ImageReader(logo_zanussi_path)
+        img_width, img_height = img.getSize()
+        aspect_ratio = img_width / img_height
+        max_width, max_height = 80, 50
+        if img_width > max_width or img_height > max_height:
+            if img_width > img_height:
+                new_width2 = max_width
+                new_height2 = new_width2 / aspect_ratio
+            else:
+                new_height2 = max_height
+                new_width2 = new_height2 * aspect_ratio
+        else:
+            new_width2, new_height2 = img_width, img_height
+        c.drawImage(img, 460, height - new_height2 - 20, width=new_width2, height=new_height2)
+    except Exception as e:
+        print("Logo Zanussi non caricato:", e)
+
+    c.line(50, height - 105, width - 50, height - 105)
+
+    c.setFont("Times-Bold", 16)
+
+    c.drawString(50,400, f"Prezzo totale =")
+
+    # Linea tratteggiata finale
+    c.setDash(3, 2)
+    c.line(50, height - 655, width - 50, height - 655)
+    c.line(50, height - 660, width - 50, height - 660)
+    c.setDash()
+
+    # Footer
+    diff = 740
+    c.setFont("Times-Roman", 9)
+    c.drawString(50, height - diff, "Valtservice")
+    c.drawString(50, height - diff - 20, "Part. Iva:.00872020144")
+    c.drawString(50, height - diff - 30, "Iscrizione R.E.A.SO - 65776")
+    c.drawString(450, height - diff, "Filiale di Sondrio:")
+    c.drawString(450, height - diff - 10, "Via  Valeriana, 103/A")
+    c.drawString(450, height - diff - 20, "23019 TRAONA (SO)")
+    c.drawString(450, height - diff - 30, "Tel. (+39) 0342590138")
+    c.drawString(450, height - diff - 40, "info@valtservice.com")
+    c.setFont("Times-Roman", 7)
+    c.drawString(50, height - diff - 60, "I modelli e le specifiche tecniche dei prodotti indicati possono subire variazioni senza preavviso.")
+
+
+
     # Aggiungi pagina finale (condizioni)
     c.showPage()
     c.setFont("Times-Roman", 16)
